@@ -1,3 +1,5 @@
+pub mod rules;
+
 use slice_find::SliceFind;
 
 use country_code_enum::CountryCode;
@@ -255,6 +257,28 @@ impl AnyPKI {
         if ! self.readonly {
             panic!("try to apply a modifiable (non-finalized) instance of AnyPKI.");
         }
+    }
+
+    pub fn clear(mut self) -> Self {
+        self._rw_check();
+
+        self.blacklist = None;
+        self.whitelist = None;
+
+        self
+    }
+
+    pub fn extend(mut self, other: &mut Self) -> Self {
+        self._rw_check();
+
+        if let Some(ref bl) = other.blacklist {
+            self.blacklist.get_or_insert_default().extend_from_slice(bl);
+        }
+        if let Some(ref wl) = other.whitelist {
+            self.whitelist.get_or_insert_default().extend_from_slice(wl);
+        }
+
+        self
     }
 
     /// removes any certificates matches the provided filter.
