@@ -1,0 +1,27 @@
+[package]
+name = "anypki"
+version = "0.1.0"
+authors = ["Delta4 <delta4chat@gmx.com>"]
+edition = "2021"
+description="AnyPKI is a fully customizable PKI tool that allows your project to have a customized CA trust chain, blacklist/whitelist filtering root CAs by Country Code, Serial Number, SHA-1/SHA-256 fingerprint, or Issuer Name."
+license="GPL-3.0"
+repository="https://github.com/delta4chat/anypki"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { version = "1.0.93", features = ["backtrace"] }
+bcder = "0.7.4"
+country-code-enum = "0.2.0"
+rustls-pki-types = "1.10.0"
+slice-find = "0.0.1"
+x509-certificate = "0.24.0"
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+overflow-checks = true
+debug = 2
+lto = true
+codegen-units = 1
+
