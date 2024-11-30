@@ -152,10 +152,8 @@ impl Filter {
                         if cc.as_ref() == s.as_str() {
                             return true;
                         }
-                    } else {
-                        if cc.as_ref().as_bytes() == val.as_slice() {
-                            return true;
-                        }
+                    } else if cc.as_ref().as_bytes() == val.as_slice() {
+                        return true;
                     }
                 }
             },
@@ -347,7 +345,7 @@ impl AnyPKI {
         }
 
         // no filter... default to allow
-        return true;
+        true
     }
 
     /// Apply this filter to a list of certificates.
@@ -407,6 +405,6 @@ Ci77o0cOPaYjesYBx4/IXr9tgFa+iiS6M+qf4TIRnvHST4D2G0CvOJ4RUHlzEhLN
 AAoACxGV2lZFA4gKn2fQ1XmxqI1AbQ3CekD6819kR5LLU7m7Wc5P/dAVUwHY3+vZ
 5nbv0CO7O6l5s9UCKc2Jo5YPSjXnTkLAdc0Hz+Ys63su
 -----END CERTIFICATE-----").unwrap());
-        assert_eq!(dbg!(v), false);
+        assert!(dbg!(v) == false);
     }
 }
