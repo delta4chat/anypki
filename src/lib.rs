@@ -1,10 +1,12 @@
 pub mod rules;
 
+use std::collections::HashSet;
+
 use slice_find::SliceFind;
 
 use country_code_enum::CountryCode;
 
-use x509_certificate::{
+use x509cert::{
     X509Certificate,
     KeyAlgorithm, SignatureAlgorithm, DigestAlgorithm,
 };
@@ -73,7 +75,7 @@ impl TryFrom<Certificate> for X509Certificate {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Fingerprint {
     SHA1([u8; 20]),
     SHA256([u8; 32]),
@@ -106,7 +108,7 @@ impl From<&Fingerprint> for DigestAlgorithm {
 }
 
 /// A filter exclude certificates by country code, fingerprint, or name.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Filter {
     CountryCode(CountryCode),
     PublicKey(Vec<u8>),
@@ -224,8 +226,8 @@ impl Filter {
 /// A builder style for building a set of certificates.
 #[derive(Debug, Clone)]
 pub struct AnyPKI {
-    blacklist: Option<Vec<Filter>>,
-    whitelist: Option<Vec<Filter>>,
+    blacklist: Option<HashSet<Filter>>,
+    whitelist: Option<HashSet<Filter>>,
 
     readonly: bool,
 }
@@ -268,14 +270,14 @@ impl AnyPKI {
         self
     }
 
-    pub fn extend(mut self, other: &mut Self) -> Self {
+    pub fn extend(mut self, other: &Self) -> Self {
         self._rw_check();
 
         if let Some(ref bl) = other.blacklist {
-            self.blacklist.get_or_insert_default().extend_from_slice(bl);
+            self.blacklist.get_or_insert_default().extend(bl.clone());
         }
         if let Some(ref wl) = other.whitelist {
-            self.whitelist.get_or_insert_default().extend_from_slice(wl);
+            self.whitelist.get_or_insert_default().extend(wl.clone());
         }
 
         self
@@ -287,7 +289,7 @@ impl AnyPKI {
         self._rw_check();
 
         let blacklist = self.blacklist.get_or_insert_default();
-        blacklist.push(f.into());
+        blacklist.insert(f.into());
         self
     }
     #[inline(always)]
@@ -303,7 +305,7 @@ impl AnyPKI {
         self._rw_check();
 
         let whitelist = self.whitelist.get_or_insert_default();
-        whitelist.push(f.into());
+        whitelist.insert(f.into());
         self
     }
     #[inline(always)]
