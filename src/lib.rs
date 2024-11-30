@@ -1,5 +1,7 @@
 pub mod rules;
 
+use core::ops::Deref;
+
 use std::collections::HashSet;
 
 use slice_find::SliceFind;
@@ -12,25 +14,37 @@ use x509cert::{
 };
 
 #[derive(Debug, Clone)]
-pub enum Certificate {
-    Rustls(rustls_pki_types::TrustAnchor<'static>),
+pub struct Certificate(X509Certificate);
 
-    X509(X509Certificate),
+impl From<X509Certificate> for Certificate {
+    fn from(val: X509Certificate) -> Self {
+        Self(val)
+    }
+}
+impl From<Certificate> for X509Certificate {
+    fn from(val: Certificate) -> Self {
+        val.0
+    }
 }
 
-macro_rules! certificate_from_inner_impl {
-    ($n:ident, $t:ty) => {
-        impl From<$t> for Certificate {
-            #[inline(always)]
-            fn from(val: $t) -> Self {
-                Self::$n(val)
-            }
-        }
-    };
+impl TryFrom<rustls_pki_types::TrustAnchor<'_>> for Certificate {
+    type Error = anyhow::Error;
+    fn try_from(val: rustls_pki_types::TrustAnchor<'_>) -> anyhow::Result<Self> {
+        val.subject.deref().try_into()
+    }
 }
-
-certificate_from_inner_impl!(Rustls, rustls_pki_types::TrustAnchor<'static>);
-certificate_from_inner_impl!(X509, X509Certificate);
+impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
+    type Error = anyhow::Error;
+    fn try_from(val: rustls_pki_types::CertificateDer<'_>) -> anyhow::Result<Self> {
+        val.deref().try_into()
+    }
+}
+impl TryFrom<native_tls::Certificate> for Certificate {
+    type Error = anyhow::Error;
+    fn try_from(val: native_tls::Certificate) -> anyhow::Result<Self> {
+        val.to_der()?.try_into()
+    }
+}
 
 impl TryFrom<&[u8]> for Certificate {
     type Error = anyhow::Error;
@@ -48,30 +62,17 @@ impl TryFrom<&[u8]> for Certificate {
         anyhow::bail!("provided byte array is not a valid format of DER, BER, or PEM.");
     }
 }
+impl TryFrom<Vec<u8>> for Certificate {
+    type Error = anyhow::Error;
+    fn try_from(val: Vec<u8>) -> anyhow::Result<Self> {
+        let val: &[u8] = val.as_ref();
+        val.try_into()
+    }
+}
 impl<const N: usize> TryFrom<&[u8; N]> for Certificate {
     type Error = anyhow::Error;
     fn try_from(val: &[u8; N]) -> anyhow::Result<Self> {
         val.as_ref().try_into()
-    }
-}
-
-impl Certificate {
-    pub fn normalize(&self) -> anyhow::Result<X509Certificate> {
-        let this = self.clone();
-
-        use Certificate::*;
-        match this {
-            X509(xc) => Ok(xc),
-            Rustls(ta) => {
-                Ok(X509Certificate::from_der(ta.subject)?)
-            },
-        }
-    }
-}
-impl TryFrom<Certificate> for X509Certificate {
-    type Error = anyhow::Error;
-    fn try_from(val: Certificate) -> anyhow::Result<Self> {
-        val.normalize()
     }
 }
 
@@ -140,13 +141,7 @@ filter_from_inner_impl!(KeyAlgorithm, KeyAlgorithm);
 
 impl Filter {
     pub fn matches(&self, cert: &Certificate) -> bool {
-        let cert =
-            match cert.normalize() {
-                Ok(v) => v,
-                _ => {
-                    return false;
-                }
-            };
+        let cert = &cert.0;
 
         use Filter::*;
         match self {
@@ -335,7 +330,7 @@ impl AnyPKI {
 
         if let Some(ref wl) = self.whitelist {
             for allow in wl.iter() {
-                if allow.matches(&cert) {
+                if allow.matches(cert) {
                     return true;
                 }
             }
@@ -344,7 +339,7 @@ impl AnyPKI {
 
         if let Some(ref bl) = self.blacklist {
             for deny in bl.iter() {
-                if deny.matches(&cert) {
+                if deny.matches(cert) {
                     return false;
                 }
             }
