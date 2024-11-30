@@ -1,7 +1,6 @@
 pub mod rules;
 
 use core::ops::Deref;
-
 use std::collections::HashSet;
 
 use slice_find::SliceFind;
@@ -92,6 +91,37 @@ impl PartialEq<[u8]> for Fingerprint {
             SHA384(v) => { &v[..] == other },
             SHA512(v) => { &v[..] == other },
         }
+    }
+}
+
+impl TryFrom<&[u8]> for Fingerprint {
+    type Error = anyhow::Error;
+    fn try_from(val: &[u8]) -> anyhow::Result<Self> {
+        Ok(match val.len() {
+            20 => {
+                let mut h = [0u8; 20];
+                h.copy_from_slice(val);
+                Self::SHA1(h)
+            },
+            32 => {
+                let mut h = [0u8; 32];
+                h.copy_from_slice(val);
+                Self::SHA256(h)
+            },
+            48 => {
+                let mut h = [0u8; 48];
+                h.copy_from_slice(val);
+                Self::SHA384(h)
+            },
+            64 => {
+                let mut h = [0u8; 64];
+                h.copy_from_slice(val);
+                Self::SHA512(h)
+            },
+            _ => {
+                anyhow::bail!("provided byte array length is not valid for SHA1, SHA256, SHA384, and SHA512.");
+            }
+        })
     }
 }
 
@@ -267,10 +297,10 @@ impl AnyPKI {
         self._rw_check();
 
         if let Some(ref bl) = other.blacklist {
-            self.blacklist.get_or_insert_default().extend(bl.clone());
+            self.blacklist.get_or_insert_with(Default::default).extend(bl.clone());
         }
         if let Some(ref wl) = other.whitelist {
-            self.whitelist.get_or_insert_default().extend(wl.clone());
+            self.whitelist.get_or_insert_with(Default::default).extend(wl.clone());
         }
 
         self
@@ -281,7 +311,7 @@ impl AnyPKI {
     pub fn blacklist(mut self, f: impl Into<Filter>) -> Self {
         self._rw_check();
 
-        let blacklist = self.blacklist.get_or_insert_default();
+        let blacklist = self.blacklist.get_or_insert_with(Default::default);
         blacklist.insert(f.into());
         self
     }
@@ -297,7 +327,7 @@ impl AnyPKI {
     pub fn whitelist(mut self, f: impl Into<Filter>) -> Self {
         self._rw_check();
 
-        let whitelist = self.whitelist.get_or_insert_default();
+        let whitelist = self.whitelist.get_or_insert_with(Default::default);
         whitelist.insert(f.into());
         self
     }
