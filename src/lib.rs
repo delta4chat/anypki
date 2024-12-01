@@ -1,7 +1,10 @@
 pub mod rules;
+pub use rules::*;
 
 use core::ops::Deref;
-use std::collections::HashSet;
+
+extern crate alloc;
+use alloc::sync::Arc;
 
 use slice_find::SliceFind;
 
@@ -138,7 +141,7 @@ impl From<&Fingerprint> for DigestAlgorithm {
     }
 }
 
-/// A filter exclude certificates by country code, fingerprint, or name.
+/// A filter match certificates by country code, public key, serial number, fingerprint, signature algorithm, key algorithm, or name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Filter {
     CountryCode(CountryCode),
@@ -249,10 +252,8 @@ impl Filter {
 /// A builder style for building a set of certificates.
 #[derive(Debug, Clone)]
 pub struct AnyPKI {
-    blacklist: Option<HashSet<Filter>>,
-    whitelist: Option<HashSet<Filter>>,
-
-    readonly: bool,
+    blacklist: Arc<scc::HashSet<Arc<Filter>>>,
+    whitelist: Arc<scc::HashSet<Arc<Filter>>>,
 }
 impl Default for AnyPKI {
     fn default() -> Self {
@@ -263,115 +264,61 @@ impl AnyPKI {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
-            blacklist: None,
-            whitelist: None,
-
-            readonly: false,
+            blacklist: Arc::new(scc::HashSet::new()),
+            whitelist: Arc::new(scc::HashSet::new()),
         }
     }
 
-    #[inline(always)]
-    fn _rw_check(&self) {
-        if self.readonly {
-            panic!("try to modify a read-only (finalized) instance of AnyPKI.");
-        }
+    pub fn clear(&self) -> Self {
+        self.blacklist.clear();
+        self.whitelist.clear();
+
+        self.clone()
     }
 
-    #[inline(always)]
-    fn _ro_check(&self) {
-        if ! self.readonly {
-            panic!("try to apply a modifiable (non-finalized) instance of AnyPKI.");
-        }
-    }
+    pub fn extend(&self, other: &Self) -> Self {
+        other.blacklist.scan(|f| { let _ = self.blacklist.insert(f.clone()); });
 
-    pub fn clear(mut self) -> Self {
-        self._rw_check();
+        other.whitelist.scan(|f| { let _ = self.whitelist.insert(f.clone()); });
 
-        self.blacklist = None;
-        self.whitelist = None;
-
-        self
-    }
-
-    pub fn extend(mut self, other: &Self) -> Self {
-        self._rw_check();
-
-        if let Some(ref bl) = other.blacklist {
-            self.blacklist.get_or_insert_with(Default::default).extend(bl.clone());
-        }
-        if let Some(ref wl) = other.whitelist {
-            self.whitelist.get_or_insert_with(Default::default).extend(wl.clone());
-        }
-
-        self
+        self.clone()
     }
 
     /// removes any certificates matches the provided filter.
     #[inline(always)]
-    pub fn blacklist(mut self, f: impl Into<Filter>) -> Self {
-        self._rw_check();
-
-        let blacklist = self.blacklist.get_or_insert_with(Default::default);
-        blacklist.insert(f.into());
-        self
+    pub fn blacklist(&self, f: impl Into<Filter>) -> Self {
+        let _ = self.blacklist.insert(Arc::new(f.into()));
+        self.clone()
     }
     #[inline(always)]
-    pub fn ban(self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
+    pub fn ban(&self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
     #[inline(always)]
-    pub fn disallow(self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
+    pub fn disallow(&self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
     #[inline(always)]
-    pub fn deny(self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
+    pub fn deny(&self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
 
     /// only allows certificates that matches provided filter.
     #[inline(always)]
-    pub fn whitelist(mut self, f: impl Into<Filter>) -> Self {
-        self._rw_check();
-
-        let whitelist = self.whitelist.get_or_insert_with(Default::default);
-        whitelist.insert(f.into());
-        self
+    pub fn whitelist(&self, f: impl Into<Filter>) -> Self {
+        let _ = self.whitelist.insert(Arc::new(f.into()));
+        self.clone()
     }
     #[inline(always)]
-    pub fn exclusive(self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
+    pub fn exclusive(&self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
     #[inline(always)]
-    pub fn allow(self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
+    pub fn allow(&self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
     #[inline(always)]
-    pub fn permit(self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
-
-    #[inline(always)]
-    pub fn finalize(mut self) -> Self {
-        self.readonly = true;
-
-        self
-    }
-    #[inline(always)]
-    pub fn build(self) -> Self { self.finalize() }
-    #[inline(always)]
-    pub fn freeze(self) -> Self { self.finalize() }
-    #[inline(always)]
-    pub fn readonly(self) -> Self { self.finalize() }
+    pub fn permit(&self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
 
     /// Checks the provided certificate whether should be kept.
     #[inline(always)]
     pub fn is_valid(&self, cert: &Certificate) -> bool {
-        self._ro_check();
-
-        if let Some(ref wl) = self.whitelist {
-            for allow in wl.iter() {
-                if allow.matches(cert) {
-                    return true;
-                }
-            }
-            return false;
+        if ! self.whitelist.is_empty() {
+            return self.whitelist.any(|wf| { wf.matches(cert) });
         }
 
-        if let Some(ref bl) = self.blacklist {
-            for deny in bl.iter() {
-                if deny.matches(cert) {
-                    return false;
-                }
-            }
-            return true;
+        if ! self.blacklist.is_empty() {
+            return ! self.blacklist.any(|bf| { bf.matches(cert) });
         }
 
         // no filter... default to allow
@@ -381,18 +328,14 @@ impl AnyPKI {
     /// Apply this filter to a list of certificates.
     #[inline(always)]
     pub fn apply(&self, iter: impl Iterator<Item=Certificate>) -> impl Iterator<Item=Certificate> {
-        self._ro_check();
-
         let this = self.clone();
-        iter.filter(move |x| { this.is_valid(x) })
+        iter.filter(move |cert| { this.is_valid(cert) })
     }
 
     /// retain provided Vec to make sure it only contains valid certificates.
     #[inline(always)]
     pub fn retain(&self, list: &mut Vec<Certificate>) {
-        self._ro_check();
-
-        list.retain(|x| { self.is_valid(x) })
+        list.retain(|cert| { self.is_valid(cert) })
     }
 }
 
@@ -402,7 +345,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let ak = AnyPKI::new().ban(CountryCode::CN).ban(CountryCode::HK).build();
+        let ak = DefaultRules::mitm_threats_extra().build();
         let v = ak.is_valid(&Certificate::try_from(b"-----BEGIN CERTIFICATE-----
 MIIFjTCCA3WgAwIBAgIEGErM1jANBgkqhkiG9w0BAQsFADBWMQswCQYDVQQGEwJD
 TjEwMC4GA1UECgwnQ2hpbmEgRmluYW5jaWFsIENlcnRpZmljYXRpb24gQXV0aG9y
