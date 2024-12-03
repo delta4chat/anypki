@@ -13,7 +13,7 @@ repository="https://github.com/delta4chat/anypki"
 anyhow = { version = "1.0.93", features = ["backtrace"] }
 bcder = "0.7.4"
 country-code-enum = "0.2.0"
-native-tls = { version = "0.2.12", default-features = false }
+native-tls = { version = "0.2.12", default-features = false, features = ["alpn", "vendored"] }
 rustls-pki-types = "1.10.0"
 scc = "2.2.5"
 slice-find = "0.0.1"
