@@ -315,13 +315,20 @@ impl AnyPKI {
 
     /// Checks the provided certificate whether should be kept.
     #[inline(always)]
-    pub fn is_valid(&self, cert: &Certificate) -> bool {
+    pub fn is_valid(&self, to_cert: impl TryInto<Certificate>) -> bool {
+        let cert =
+            if let Ok(c) = to_cert.try_into() {
+                c
+            } else {
+                return false;
+            };
+
         if ! self.whitelist.is_empty() {
-            return self.whitelist.any(|wf| { wf.matches(cert) });
+            return self.whitelist.any(|wf| { wf.matches(&cert) });
         }
 
         if ! self.blacklist.is_empty() {
-            return ! self.blacklist.any(|bf| { bf.matches(cert) });
+            return ! self.blacklist.any(|bf| { bf.matches(&cert) });
         }
 
         // no filter... default to allow
@@ -330,15 +337,15 @@ impl AnyPKI {
 
     /// Apply this filter to a list of certificates.
     #[inline(always)]
-    pub fn apply(&self, iter: impl Iterator<Item=Certificate>) -> impl Iterator<Item=Certificate> {
+    pub fn apply(&self, iter: impl Iterator<Item=impl TryInto<Certificate>+Clone>) -> impl Iterator<Item=impl TryInto<Certificate>+Clone> {
         let this = self.clone();
-        iter.filter(move |cert| { this.is_valid(cert) })
+        iter.filter(move |to_cert| { this.is_valid(to_cert.clone()) })
     }
 
     /// retain provided Vec to make sure it only contains valid certificates.
     #[inline(always)]
-    pub fn retain(&self, list: &mut Vec<Certificate>) {
-        list.retain(|cert| { self.is_valid(cert) })
+    pub fn retain(&self, list: &mut Vec<impl TryInto<Certificate>+Clone>) {
+        list.retain(|cert| { self.is_valid(cert.clone()) })
     }
 }
 

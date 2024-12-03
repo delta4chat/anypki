@@ -3,7 +3,7 @@ use crate::*;
 #[test]
 fn it_works() {
     let ak = DefaultRules::mitm_threats_extra();
-    let should_invalid = ak.is_valid(&Certificate::try_from(b"-----BEGIN CERTIFICATE-----
+    let should_invalid = ak.is_valid(b"-----BEGIN CERTIFICATE-----
 MIIFjTCCA3WgAwIBAgIEGErM1jANBgkqhkiG9w0BAQsFADBWMQswCQYDVQQGEwJD
 TjEwMC4GA1UECgwnQ2hpbmEgRmluYW5jaWFsIENlcnRpZmljYXRpb24gQXV0aG9y
 aXR5MRUwEwYDVQQDDAxDRkNBIEVWIFJPT1QwHhcNMTIwODA4MDMwNzAxWhcNMjkx
@@ -34,10 +34,10 @@ Ci77o0cOPaYjesYBx4/IXr9tgFa+iiS6M+qf4TIRnvHST4D2G0CvOJ4RUHlzEhLN
 /v5WOaHIz16eGWRGENoXkbcFgKyLmZJ956LYBws2J+dIeWCKw9cTXPhyQN9Ky8+Z
 AAoACxGV2lZFA4gKn2fQ1XmxqI1AbQ3CekD6819kR5LLU7m7Wc5P/dAVUwHY3+vZ
 5nbv0CO7O6l5s9UCKc2Jo5YPSjXnTkLAdc0Hz+Ys63su
------END CERTIFICATE-----").unwrap());
+-----END CERTIFICATE-----");
     assert!(dbg!(should_invalid) == false);
 
-    let should_valid = ak.is_valid(&Certificate::try_from(b"-----BEGIN CERTIFICATE-----
+    let should_valid = ak.is_valid(b"-----BEGIN CERTIFICATE-----
 MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAwTzELMAkGA1UE
 BhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2VhcmNoIEdyb3VwMRUwEwYDVQQD
 EwxJU1JHIFJvb3QgWDEwHhcNMTUwNjA0MTEwNDM4WhcNMzUwNjA0MTEwNDM4WjBPMQswCQYDVQQG
@@ -63,7 +63,7 @@ JzVcoyi3B43njTOQ5yOf+1CceWxG1bQVs5ZufpsMljq4Ui0/1lvh+wjChP4kqKOJ2qxq4RgqsahD
 YVvTH9w7jXbyLeiNdd8XM2w9U/t7y0Ff/9yi0GE44Za4rF2LN9d11TPAmRGunUHBcnWEvgJBQl9n
 JEiU0Zsnvgc/ubhPgXRR4Xq37Z0j4r7g1SgEEzwxA57demyPxgcYxn/eR44/KJ4EBs+lVDR3veyJ
 m+kXQ99b21/+jh5Xos1AnX5iItreGCc=
------END CERTIFICATE-----").unwrap());
+-----END CERTIFICATE-----");
 
     assert!(dbg!(should_valid) == true);
 }
