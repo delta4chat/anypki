@@ -32,12 +32,14 @@ impl From<Certificate> for X509Certificate {
     }
 }
 
+/*
 impl TryFrom<rustls_pki_types::TrustAnchor<'_>> for Certificate {
     type Error = anyhow::Error;
     fn try_from(val: rustls_pki_types::TrustAnchor<'_>) -> anyhow::Result<Self> {
         val.subject.deref().try_into()
     }
 }
+*/
 impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
     type Error = anyhow::Error;
     fn try_from(val: rustls_pki_types::CertificateDer<'_>) -> anyhow::Result<Self> {
