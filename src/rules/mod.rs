@@ -1,12 +1,16 @@
 use crate::*;
 
+mod source;
+use source::revoke_suspicious_certs;
+
 /// Pre-defined rules of AnyPKI
 pub struct DefaultRules;
 // https://en.wikipedia.org/wiki/Internet_censorship_and_surveillance_by_country
 impl DefaultRules {
     /// blacklisting extremely possible MITM threats, including some countries with strictly censorship or well-known Bad Behavior CAs
     pub fn mitm_threats() -> AnyPKI {
-        AnyPKI::new()
+        let out =
+            AnyPKI::new()
             .ban(CountryCode::KZ) // Kazakhstan, well-known MITM country: https://en.wikipedia.org/wiki/Kazakhstan_man-in-the-middle_attack
 
             .ban(CountryCode::IR) // Iran, "Halal Intranet": https://en.wikipedia.org/wiki/2019_Internet_blackout_in_Iran
@@ -18,8 +22,14 @@ impl DefaultRules {
             .ban(CountryCode::HK) // HongKong, rule dominated by GFW-country: https://en.wikipedia.org/wiki/2020_Hong_Kong_national_security_law
             .ban(CountryCode::MO) // Macau, another "SAR" of GFW-country: https://en.wikipedia.org/wiki/Special_administrative_regions_of_China
 
-            .ban(CountryCode::TM) // Turkmenistan, https://arxiv.org/pdf/2304.04835
-        // TODO: update this list
+            .ban(CountryCode::TM); // Turkmenistan, https://arxiv.org/pdf/2304.04835
+             // TODO: update this CountryCode list
+
+        for fp in revoke_suspicious_certs::FINGERPRINT_LIST.iter() {
+            out.ban(*fp);
+        }
+
+        out
     }
 
     /// contains all of mitm_threats, but with extra list of Potential MITM threats.
