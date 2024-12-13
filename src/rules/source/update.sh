@@ -28,7 +28,12 @@ echo "use crate::*;" > rs.tmp.out
 echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> rs.tmp.out
 for cert in *.crt
 do
-	echo "    Fingerprint::SHA1([$(echo $(openssl x509 -in $cert -outform der | sha1sum | awk '{print $1}' | xxd -r -p | xxd -c 64 -i))])," >> rs.tmp.out
+	echo "/*" >> rs.tmp.out
+	openssl x509 -in $cert -noout -serial -fingerprint -issuer -subject >> rs.tmp.out
+	echo "*/" >> rs.tmp.out
+	
+	echo "Fingerprint::SHA1([$(echo $(openssl x509 -in $cert -outform der | sha1sum | awk '{print $1}' | xxd -r -p | xxd -c 64 -i))])," >> rs.tmp.out
+	echo -e "\n" >> rs.tmp.out
 done
 echo "];" >> rs.tmp.out
 
