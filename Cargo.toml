@@ -17,7 +17,7 @@ native-tls = { version = "0.2.12", default-features = false, features = ["alpn",
 rustls-pki-types = "1.10.0"
 scc = "2.2.5"
 slice-find = "0.0.1"
-x509cert = "0.25.0"
+x509cert = "0.25.1"
 #x509cert = { path = "../cryptography-rs/x509-certificate/" }
 
 [profile.release]

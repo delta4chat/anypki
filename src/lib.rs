@@ -18,7 +18,7 @@ use x509cert::{
     KeyAlgorithm, SignatureAlgorithm, DigestAlgorithm,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Certificate(X509Certificate);
 
 impl From<X509Certificate> for Certificate {
@@ -149,6 +149,8 @@ impl From<&Fingerprint> for DigestAlgorithm {
 /// A filter match certificates by country code, public key, serial number, fingerprint, signature algorithm, key algorithm, or name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Filter {
+    Certificate(Certificate),
+
     CountryCode(CountryCode),
     PublicKey(Vec<u8>),
     SerialNumber(bcder::int::Integer),
@@ -169,6 +171,8 @@ macro_rules! filter_from_inner_impl {
     };
 }
 
+
+filter_from_inner_impl!(Certificate, Certificate);
 filter_from_inner_impl!(CountryCode, CountryCode);
 filter_from_inner_impl!(PublicKey, Vec<u8>);
 filter_from_inner_impl!(SerialNumber, bcder::int::Integer);
@@ -183,6 +187,9 @@ impl Filter {
 
         use Filter::*;
         match self {
+            Certificate(c) => {
+                return &c.0 == cert;
+            },
             CountryCode(cc) => {
                 for attr in cert.issuer_name().iter_country().chain(cert.subject_name().iter_country()) {
                     let val = &attr.value;
