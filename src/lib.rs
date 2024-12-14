@@ -9,6 +9,8 @@ use core::ops::Deref;
 extern crate alloc;
 use alloc::sync::Arc;
 
+use hex_literal::hex;
+
 use slice_find::SliceFind;
 
 use country_code_enum::CountryCode;

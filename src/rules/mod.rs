@@ -1,7 +1,8 @@
 use crate::*;
 
-mod source;
+pub mod source;
 use source::revoke_suspicious_certs;
+use source::caprogram_360;
 
 /// Pre-defined rules of AnyPKI
 pub struct DefaultRules;
@@ -9,27 +10,28 @@ pub struct DefaultRules;
 impl DefaultRules {
     /// blacklisting extremely possible MITM threats, including some countries with strictly censorship or well-known Bad Behavior CAs
     pub fn mitm_threats() -> AnyPKI {
-        let out =
-            AnyPKI::new()
-            .ban(CountryCode::KZ) // Kazakhstan, well-known MITM country: https://en.wikipedia.org/wiki/Kazakhstan_man-in-the-middle_attack
-
-            .ban(CountryCode::IR) // Iran, "Halal Intranet": https://en.wikipedia.org/wiki/2019_Internet_blackout_in_Iran
-            .ban(CountryCode::KP) // North Korea, Kwangmyong Intranet: https://en.wikipedia.org/wiki/Kwangmyong_(network)
-
-            .ban(CountryCode::RU) // Russia, Roskomnadzor: https://en.wikipedia.org/wiki/Roskomnadzor | https://blocklist.rkn.gov.ru/
-
-            .ban(CountryCode::CN) // Mainland China, GFW-country: https://en.wikipedia.org/wiki/Great_Firewall_of_China
-            .ban(CountryCode::HK) // HongKong, rule dominated by GFW-country: https://en.wikipedia.org/wiki/2020_Hong_Kong_national_security_law
-            .ban(CountryCode::MO) // Macau, another "SAR" of GFW-country: https://en.wikipedia.org/wiki/Special_administrative_regions_of_China
-
-            .ban(CountryCode::TM); // Turkmenistan, https://arxiv.org/pdf/2304.04835
-             // TODO: update this CountryCode list
+        let out = AnyPKI::new();
 
         for fp in revoke_suspicious_certs::FINGERPRINT_LIST.iter() {
             out.ban(*fp);
         }
+        for fp in caprogram_360::FINGERPRINT_LIST.iter() {
+            out.ban(*fp);
+        }
 
-        out
+        out.ban(CountryCode::KZ) // Kazakhstan, well-known MITM country: https://en.wikipedia.org/wiki/Kazakhstan_man-in-the-middle_attack
+
+           .ban(CountryCode::IR) // Iran, "Halal Intranet": https://en.wikipedia.org/wiki/2019_Internet_blackout_in_Iran
+           .ban(CountryCode::KP) // North Korea, Kwangmyong Intranet: https://en.wikipedia.org/wiki/Kwangmyong_(network)
+
+           .ban(CountryCode::RU) // Russia, Roskomnadzor: https://en.wikipedia.org/wiki/Roskomnadzor | https://blocklist.rkn.gov.ru/
+
+           .ban(CountryCode::CN) // Mainland China, GFW-country: https://en.wikipedia.org/wiki/Great_Firewall_of_China
+           .ban(CountryCode::HK) // HongKong, rule dominated by GFW-country: https://en.wikipedia.org/wiki/2020_Hong_Kong_national_security_law
+           .ban(CountryCode::MO) // Macau, another "SAR" of GFW-country: https://en.wikipedia.org/wiki/Special_administrative_regions_of_China
+
+           .ban(CountryCode::TM) // Turkmenistan, https://arxiv.org/pdf/2304.04835
+        // TODO: update this CountryCode list
     }
 
     /// contains all of mitm_threats, but with extra list of Potential MITM threats.
