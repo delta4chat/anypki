@@ -22,17 +22,16 @@ cd $tmp
 
 curl https://github.com/zh250/RevokeSuspiciousCerts/archive/master.zip -v -L -o rsc.zip
 unzip rsc.zip
-cd RevokeSuspiciousCerts-master/Shared/Certificates/
 
 echo "use crate::*;" > rs.tmp.out
 echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> rs.tmp.out
-for cert in *.crt
+for cert in $(find -type f -name '*.crt')
 do
 	echo "/*" >> rs.tmp.out
 	openssl x509 -in $cert -noout -serial -sha1 -fingerprint -issuer -subject >> rs.tmp.out
 	echo "*/" >> rs.tmp.out
 	
-	echo "Fingerprint::SHA1(hex!(\"$(echo $(openssl x509 -in $cert -outform der | sha1sum | awk '{print $1}'))\")])," >> rs.tmp.out
+	echo "Fingerprint::SHA1(hex!(\"$(echo $(openssl x509 -in $cert -outform der | sha1sum | awk '{print $1}'))\"))," >> rs.tmp.out
 	echo -e "\n" >> rs.tmp.out
 done
 echo "];" >> rs.tmp.out
