@@ -81,7 +81,8 @@ impl TryFrom<Vec<u8>> for Certificate {
 impl<const N: usize> TryFrom<&[u8; N]> for Certificate {
     type Error = anyhow::Error;
     fn try_from(val: &[u8; N]) -> anyhow::Result<Self> {
-        val.as_ref().try_into()
+        let val: &[u8] = val.as_ref();
+        val.try_into()
     }
 }
 
@@ -132,6 +133,13 @@ impl TryFrom<&[u8]> for Fingerprint {
                 anyhow::bail!("provided byte array length is not valid for SHA1, SHA256, SHA384, and SHA512.");
             }
         })
+    }
+}
+impl<const N: usize> TryFrom<&[u8; N]> for Fingerprint {
+    type Error = anyhow::Error;
+    fn try_from(val: &[u8; N]) -> anyhow::Result<Self> {
+        let val: &[u8] = val.as_ref();
+        val.try_into()
     }
 }
 
