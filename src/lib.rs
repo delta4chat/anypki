@@ -48,6 +48,8 @@ impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
         val.deref().try_into()
     }
 }
+
+#[cfg(feature="native-tls")]
 impl TryFrom<native_tls::Certificate> for Certificate {
     type Error = anyhow::Error;
     fn try_from(val: native_tls::Certificate) -> anyhow::Result<Self> {

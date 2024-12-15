@@ -9,12 +9,16 @@ repository="https://github.com/delta4chat/anypki"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+native-tls = ["dep:native-tls"]
+
 [dependencies]
 anyhow = { version = "1.0.93", features = ["backtrace"] }
 bcder = "0.7.4"
 country-code-enum = "0.2.0"
 hex-literal = "0.4.1"
-native-tls = { version = "0.2.12", default-features = false, features = ["alpn", "vendored"] }
+native-tls = { optional = true, version = "0.2.12", default-features = false, features = ["alpn", "vendored"] }
 rustls-pki-types = "1.10.0"
 scc = "2.2.5"
 slice-find = "0.0.1"
