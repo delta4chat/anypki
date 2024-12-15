@@ -24,11 +24,13 @@ use x509cert::{
 pub struct Certificate(X509Certificate);
 
 impl From<X509Certificate> for Certificate {
+    #[inline(always)]
     fn from(val: X509Certificate) -> Self {
         Self(val)
     }
 }
 impl From<Certificate> for X509Certificate {
+    #[inline(always)]
     fn from(val: Certificate) -> Self {
         val.0
     }
@@ -44,6 +46,8 @@ impl TryFrom<rustls_pki_types::TrustAnchor<'_>> for Certificate {
 */
 impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: rustls_pki_types::CertificateDer<'_>) -> anyhow::Result<Self> {
         val.deref().try_into()
     }
@@ -52,6 +56,8 @@ impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
 #[cfg(feature="native-tls")]
 impl TryFrom<native_tls::Certificate> for Certificate {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: native_tls::Certificate) -> anyhow::Result<Self> {
         val.to_der()?.try_into()
     }
@@ -59,6 +65,8 @@ impl TryFrom<native_tls::Certificate> for Certificate {
 
 impl TryFrom<&[u8]> for Certificate {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: &[u8]) -> anyhow::Result<Self> {
         if let Ok(cert) = X509Certificate::from_der(val) {
             return Ok(cert.into());
@@ -75,6 +83,8 @@ impl TryFrom<&[u8]> for Certificate {
 }
 impl TryFrom<Vec<u8>> for Certificate {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: Vec<u8>) -> anyhow::Result<Self> {
         let val: &[u8] = val.as_ref();
         val.try_into()
@@ -82,6 +92,8 @@ impl TryFrom<Vec<u8>> for Certificate {
 }
 impl<const N: usize> TryFrom<&[u8; N]> for Certificate {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: &[u8; N]) -> anyhow::Result<Self> {
         let val: &[u8] = val.as_ref();
         val.try_into()
@@ -96,6 +108,7 @@ pub enum Fingerprint {
     SHA512([u8; 64]),
 }
 impl core::fmt::Debug for Fingerprint {
+    #[inline(always)]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
         use Fingerprint::*;
 
@@ -132,6 +145,8 @@ impl AsRef<[u8]> for Fingerprint {
 }
 impl TryFrom<&[u8]> for Fingerprint {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: &[u8]) -> anyhow::Result<Self> {
         Ok(match val.len() {
             20 => {
@@ -162,6 +177,8 @@ impl TryFrom<&[u8]> for Fingerprint {
 }
 impl<const N: usize> TryFrom<&[u8; N]> for Fingerprint {
     type Error = anyhow::Error;
+
+    #[inline(always)]
     fn try_from(val: &[u8; N]) -> anyhow::Result<Self> {
         let val: &[u8] = val.as_ref();
         val.try_into()
@@ -169,6 +186,7 @@ impl<const N: usize> TryFrom<&[u8; N]> for Fingerprint {
 }
 
 impl From<&Fingerprint> for DigestAlgorithm {
+    #[inline(always)]
     fn from(val: &Fingerprint) -> Self {
         use Fingerprint::*;
         use DigestAlgorithm::*;
@@ -217,6 +235,7 @@ filter_from_inner_impl!(SignatureAlgorithm, SignatureAlgorithm);
 filter_from_inner_impl!(KeyAlgorithm, KeyAlgorithm);
 
 impl Filter {
+    #[inline(always)]
     pub fn matches(&self, cert: &Certificate) -> bool {
         let cert = &cert.0;
 
@@ -316,16 +335,20 @@ impl AnyPKI {
         }
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.wlen().saturating_add(self.blen())
     }
+    #[inline(always)]
     pub fn wlen(&self) -> usize {
         self.whitelist.len()
     }
+    #[inline(always)]
     pub fn blen(&self) -> usize {
         self.blacklist.len()
     }
 
+    #[inline(always)]
     pub fn clear(&self) -> Self {
         self.blacklist.clear();
         self.whitelist.clear();
@@ -333,6 +356,7 @@ impl AnyPKI {
         self.clone()
     }
 
+    #[inline(always)]
     pub fn extend(&self, other: &Self) -> Self {
         other.blacklist.scan(|f| { let _ = self.blacklist.insert(f.clone()); });
 

@@ -11,6 +11,7 @@ pub struct DefaultRules;
 // https://en.wikipedia.org/wiki/Internet_censorship_and_surveillance_by_country
 impl DefaultRules {
     /// whitelisting the root CAs from Mozilla PKI Store, but exclude all suspicious certificates.
+    #[inline(always)]
     pub fn mozilla_without_suspicious(extra: bool) -> AnyPKI {
         let out = AnyPKI::new();
 
@@ -33,6 +34,7 @@ impl DefaultRules {
     }
 
     /// blacklisting extremely possible MITM threats, including some countries with strictly censorship or well-known Bad Behavior CAs
+    #[inline(always)]
     pub fn mitm_threats() -> AnyPKI {
         let out = AnyPKI::new();
 
@@ -59,6 +61,7 @@ impl DefaultRules {
     }
 
     /// contains all of mitm_threats, but with extra list of Potential MITM threats.
+    #[inline(always)]
     pub fn mitm_threats_extra() -> AnyPKI {
         // https://en.wikipedia.org/wiki/Freedom_on_the_Net
         Self::mitm_threats()
