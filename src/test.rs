@@ -1,7 +1,27 @@
 use crate::*;
 
 #[test]
-fn it_works() {
+fn moz() {
+    eprintln!("Mozilla Original CAs: {:?}", rules::source::mozilla::FINGERPRINT_LIST.len());
+
+    let m = DefaultRules::mitm_threats_extra();
+    let ak = DefaultRules::mozilla_without_suspicious(true);
+    eprintln!("Filtered (MITM_EXTRA): {:?}", ak.whitelist.len());
+
+    m.blacklist.scan(|cert| {
+        assert!(ak.whitelist.contains(cert) == false);
+    });
+
+    let m = DefaultRules::mitm_threats();
+    let ak = DefaultRules::mozilla_without_suspicious(false);
+    eprintln!("Filtered (MITM_NO_EXTRA): {:?}", ak.whitelist.len());
+    m.blacklist.scan(|cert| {
+        assert!(ak.whitelist.contains(cert) == false);
+    });
+}
+
+#[test]
+fn is_valid() {
     let ak = DefaultRules::mitm_threats_extra();
 
     // CFCA (CA), filtered by country code

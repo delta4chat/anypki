@@ -88,25 +88,48 @@ impl<const N: usize> TryFrom<&[u8; N]> for Certificate {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Fingerprint {
     SHA1([u8; 20]),
     SHA256([u8; 32]),
     SHA384([u8; 48]),
     SHA512([u8; 64]),
 }
+impl core::fmt::Debug for Fingerprint {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        use Fingerprint::*;
+
+        let mut out =
+            String::from(match self {
+                SHA1(_) => "SHA-1(",
+                SHA256(_) => "SHA-256(",
+                SHA384(_) => "SHA-384(",
+                SHA512(_) => "SHA-512(",
+            });
+
+        out.push_str(hex::encode(self.as_ref()).as_ref());
+        out.push(')');
+
+        f.write_str(&out)
+    }
+}
 impl PartialEq<[u8]> for Fingerprint {
     fn eq(&self, other: &[u8]) -> bool {
-        use Fingerprint::*;
-        match self {
-            SHA1(v)   => { &v[..] == other },
-            SHA256(v) => { &v[..] == other },
-            SHA384(v) => { &v[..] == other },
-            SHA512(v) => { &v[..] == other },
-        }
+        self.as_ref() == other
     }
 }
 
+impl AsRef<[u8]> for Fingerprint {
+    fn as_ref(&self) -> &[u8] {
+        use Fingerprint::*;
+        match self {
+            SHA1(v)   => { &v[..] },
+            SHA256(v) => { &v[..] },
+            SHA384(v) => { &v[..] },
+            SHA512(v) => { &v[..] },
+        }
+    }
+}
 impl TryFrom<&[u8]> for Fingerprint {
     type Error = anyhow::Error;
     fn try_from(val: &[u8]) -> anyhow::Result<Self> {
@@ -291,6 +314,16 @@ impl AnyPKI {
             blacklist: Arc::new(scc::HashSet::new()),
             whitelist: Arc::new(scc::HashSet::new()),
         }
+    }
+
+    pub len(&self) -> usize {
+        self.wlen().saturating_add(self.blen())
+    }
+    pub wlen(&self) -> usize {
+        self.whitelist.len()
+    }
+    pub blen(&self) -> usize {
+        self.blacklist.len()
     }
 
     pub fn clear(&self) -> Self {
