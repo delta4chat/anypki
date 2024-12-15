@@ -34,7 +34,7 @@ echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> rs.tmp.out
 for cert in *.pem
 do
     echo "/*"
-    openssl x509 -in $cert -noout -issuer -sha1 -fingerprint
+    openssl x509 -in $cert -noout -serial -issuer -sha1 -fingerprint
     openssl x509 -in $cert -noout -sha256 -fingerprint
     echo "*/"
     echo "Fingerprint::SHA256(hex!(\"$(openssl x509 -in $cert -outform der | sha256sum | awk '{print $1}')\")),"
