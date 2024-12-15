@@ -16,7 +16,7 @@ pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[
     Fingerprint::SHA1(hex!("4dcac7f4c3e619be8510b753b8c4b4b7cf6c63b8")), // TrustAsia Global SM2 Root CA G2
     Fingerprint::SHA1(hex!("45df30187b9681288d6a94838a816d6ea3498b8a")), // TrustAsia SM2 Root CA
     Fingerprint::SHA1(hex!("1ca6e94b692b8c8c67036000e8aeb00db0d1e648")), // NJCA SM2 ROOT
-    Fingerprint::SHA1(hex!("47620569633087FCDAD91DA5C19FA685D95C583A")), // SCCA Root CA1
+    Fingerprint::SHA1(hex!("47620569633087fcdad91da5c19fa685d95c583a")), // SCCA Root CA1
     Fingerprint::SHA1(hex!("77331482b9cd1e15ccdb1981802e5311412bb36e")), // CHINA UNICOM GLOBAL ROOT CA SM2
     Fingerprint::SHA1(hex!("8e856b17deb55eb85d68fbc7fdaf75e885c703a5")), // SDCASM2ROOTCA
     Fingerprint::SHA1(hex!("b817d2df62ca1a05cf2874a686d9f90fcc7adb0e")), // Guizhou SM2 CA
@@ -24,17 +24,17 @@ pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[
     Fingerprint::SHA1(hex!("149dcc7fe499d0f5f7511d45a749dc751f3e06bd")), // ZXCA SM2 ROOT R4
 
     /* RSA begin */
-    Fingerprint::SHA1(hex!("eb466cd37565f93cde1062cd8d9826ed23730f12")), // GDCA TrustAUTH E5 ROOT
-    Fingerprint::SHA1(hex!("0f36385b811a25c39b314e83cae9346670cc74b4")), // GDCA TrustAUTH R5 ROOT
-    Fingerprint::SHA1(hex!("23eb1ba46471a1e7e9f2db5701fef8f2f80caae9")), // 数安时代 R5 根 CA
-    Fingerprint::SHA1(hex!("f69cdbb0fcf60213b65232a6a3913f1670dac3e1")), // vTrus ECC Root CA
-    Fingerprint::SHA1(hex!("841a69fbf5cd1a2534133de3f8fcb899d0c914b7")), // vTrus Root CA
-    Fingerprint::SHA1(hex!("a3a1b06f2461234ae336a5c237fca6ffddf0d73a")), // UCA Extended Validation Root
-    Fingerprint::SHA1(hex!("28f97816197aff182518aa44fec1a0ce5cb64c8a")), // UCA Global G2 Root
-    Fingerprint::SHA1(hex!("e2b8294b5584ab6b58c290466cac3fb8398f8483")), // CFCA EV ROOT
-    Fingerprint::SHA1(hex!("d5ec8d7b4cba79f4e7e8cb9d6bae77831003216a")), // BJCA Global Root CA1
-    Fingerprint::SHA1(hex!("f42786eb6eb86d88316702fbba66a45300aa7aa6")), // BJCA Global Root CA2
-    Fingerprint::SHA1(hex!("3143649becce27eced3a3f0b8f0de4e891ddeeca")), // TUBITAK Kamu SM SSL Kok Sertifikasi - Surum 1
-    Fingerprint::SHA1(hex!("63cfb6c1272b56e4888e1c239ab62e814724c3c7")), // TrustAsia Global Root CA G3
-    Fingerprint::SHA1(hex!("5773a5615d80b2e6ac3882fc680731ac9fb5925a")), // TrustAsia Global Root CA G4
+    Fingerprint::SHA256(hex!("ea152fd132de4f4e71930a9760517a81dacbbb5f1014d8bd7782ac0cc37e9431")), // GDCA TrustAUTH E5 ROOT
+    Fingerprint::SHA256(hex!("bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893")), // GDCA TrustAUTH R5 ROOT
+    Fingerprint::SHA256(hex!("71a1a38ff485137002dd5cd780b3873dde146723ee28080ecf3738c7c4feb1ae")), // 数安时代 R5 根 CA
+    Fingerprint::SHA256(hex!("30fbba2c32238e2a98547af97931e550428b9b3f1c8eeb663 3dcfa86c5b27dd3")), // vTrus ECC Root CA
+    Fingerprint::SHA256(hex!("8a71de6559336f426c26e53880d00d88a18da4c6a91f0dcb6 194e206c5c96387")), // vTrus Root CA
+    Fingerprint::SHA256(hex!("d43af9b35473755c9684fc06d7d8cb70ee5c28e773fb294eb41ee71722924d24")), // UCA Extended Validation Root
+    Fingerprint::SHA256(hex!("9bea11c976fe014764c1be56a6f914b5a560317abd9988393382e5161aa0493c")), // UCA Global G2 Root
+    Fingerprint::SHA256(hex!("5cc3d78e4e1d5e45547a04e6873e64f90cf9536d1ccc2ef800f355c4c5fd70fd")), // CFCA EV ROOT
+    Fingerprint::SHA256(hex!("f3896f88fe7c0a882766a7fa6ad2749fb57a7f3e98fb769c1fa7b09c2c44d5ae")), // BJCA Global Root CA1
+    Fingerprint::SHA256(hex!("574df6931e278039667b720afdc1600fc27eb66dd3092979fb73856487212882")), // BJCA Global Root CA2
+    Fingerprint::SHA256(hex!("46edc3689046d53a453fb3104ab80dcaec658b2660ea1629dd7e867990648716")), // TUBITAK Kamu SM SSL Kok Sertifikasi - Surum 1
+    Fingerprint::SHA256(hex!("e0d3226aeb1163c2e48ff9be3b50b4c6431be7bb1eacc5c36b5d5ec509039a08")), // TrustAsia Global Root CA G3
+    Fingerprint::SHA256(hex!("be4b56cb5056c0136a526df444508daa36a0b54f42e4ac38f72af470e479654c")), // TrustAsia Global Root CA G4
 ];

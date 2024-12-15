@@ -27,13 +27,14 @@ echo "use crate::*;" > rs.tmp.out
 echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> rs.tmp.out
 for cert in $(find -type f -name '*.crt')
 do
-	echo "/*" >> rs.tmp.out
-	openssl x509 -in $cert -noout -serial -sha1 -fingerprint -issuer -subject >> rs.tmp.out
-	echo "*/" >> rs.tmp.out
+	echo "/*"
+	openssl x509 -in $cert -noout -serial -issuer -subject -sha1 -fingerprint
+	openssl x509 -in $cert -noout -sha256 -fingerprint
+	echo "*/"
 	
-	echo "Fingerprint::SHA1(hex!(\"$(echo $(openssl x509 -in $cert -outform der | sha1sum | awk '{print $1}'))\"))," >> rs.tmp.out
-	echo -e "\n" >> rs.tmp.out
-done
+	echo "Fingerprint::SHA256(hex!(\"$(echo $(openssl x509 -in $cert -outform der | sha256sum | awk '{print $1}'))\")),"
+	echo -e "\n"
+done >> rs.tmp.out
 echo "];" >> rs.tmp.out
 
 mv rs.tmp.out $outfile
