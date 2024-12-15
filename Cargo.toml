@@ -1,6 +1,6 @@
 [package]
 name = "anypki"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["Delta4 <delta4chat@gmx.com>"]
 edition = "2021"
 description="AnyPKI is a fully customizable PKI tool that allows your project to have a customized CA trust chain, blacklist/whitelist filtering root CAs by Country Code, Serial Number, SHA-1/SHA-256 fingerprint, or Issuer Name."
