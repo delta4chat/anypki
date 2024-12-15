@@ -8,6 +8,17 @@ fn moz() {
     let ak = DefaultRules::mozilla_without_suspicious(true);
     eprintln!("Filtered (MITM_EXTRA): {:?}", ak.whitelist.len());
 
+    let mut tp = Vec::new();
+    ak.whitelist.scan(|f| {
+        match f.as_ref() {
+            Filter::Fingerprint(fp) => {
+                tp.push(hex::encode(fp.as_ref()));
+            }
+            _=>{}
+        }
+    });
+    eprintln!("trustedpki: {}", format!("{tp:?}").replace(" ", ""));
+
     m.blacklist.scan(|cert| {
         assert!(ak.whitelist.contains(cert) == false);
     });
