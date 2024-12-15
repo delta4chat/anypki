@@ -1,6 +1,8 @@
 use crate::*;
 
 pub mod source;
+use source::mozilla;
+
 use source::revoke_suspicious_certs;
 use source::caprogram_360;
 
@@ -8,6 +10,28 @@ use source::caprogram_360;
 pub struct DefaultRules;
 // https://en.wikipedia.org/wiki/Internet_censorship_and_surveillance_by_country
 impl DefaultRules {
+    /// whitelisting the root CAs from Mozilla PKI Store, but exclude all suspicious certificates.
+    pub fn mozilla_without_suspicious(extra: bool) -> AnyPKI {
+        let out = AnyPKI::new();
+
+        let mitm =
+            if extra {
+                Self::mitm_threats_extra()
+            } else {
+                Self::mitm_threats()
+            };
+
+        for fp in mozilla::FINGERPRINT_LIST.iter() {
+            let f = Filter::Fingerprint(*fp);
+            if mitm.blacklist.contains(&f) {
+                continue;
+            }
+            out.allow(*fp);
+        }
+
+        out
+    }
+
     /// blacklisting extremely possible MITM threats, including some countries with strictly censorship or well-known Bad Behavior CAs
     pub fn mitm_threats() -> AnyPKI {
         let out = AnyPKI::new();
