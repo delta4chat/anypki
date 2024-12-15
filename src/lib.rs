@@ -316,13 +316,13 @@ impl AnyPKI {
         }
     }
 
-    pub len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.wlen().saturating_add(self.blen())
     }
-    pub wlen(&self) -> usize {
+    pub fn wlen(&self) -> usize {
         self.whitelist.len()
     }
-    pub blen(&self) -> usize {
+    pub fn blen(&self) -> usize {
         self.blacklist.len()
     }
 
