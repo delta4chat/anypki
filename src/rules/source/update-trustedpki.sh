@@ -16,8 +16,6 @@ type sed
 type rm
 type mv
 
-bash update-mozilla.sh
-
 tmp="$(mktemp -d -t anypkiRulesTrustedPkiCertUpdater.XXXXXXXX)"
 trap "rm -rfv $tmp" EXIT
 #cd $tmp
@@ -27,13 +25,13 @@ tmpout="${tmp}/rs.tmp.out"
 echo "use crate::*;" > $tmpout
 echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> $tmpout
 
-fpl="$(cargo test moz -- --nocapture 2>&1 | grep -F "trustedpki:" | awk '{print $2}' | jq -r '.[]')"
-fpn="$(cat mozilla.rs | grep -n -E $(echo $fpl | tr ' ' '|') | tr ':' ' ' | awk '{print $1}')"
+fph="$(cargo test moz -- --nocapture 2>&1 | grep -F "trustedpki:" | awk '{print $2}')"
+fpl="$(cat mozilla.rs | grep -n -E $fph | tr ':' ' ' | awk '{print $1}')"
 
 sed_command=()
-for n in $fpn
+for l in $fpl
 do
-    sed_command+=("$[n-6],$[n+2]p;")
+    sed_command+=("$[l-6],$[l+2]p;")
 done
 sed_command="$(echo ${sed_command[*]})"
 

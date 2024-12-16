@@ -1,8 +1,6 @@
 use crate::*;
 
 pub mod source;
-use source::mozilla;
-
 use source::revoke_suspicious_certs;
 use source::caprogram_360;
 
@@ -15,19 +13,18 @@ impl DefaultRules {
     pub fn mozilla_without_suspicious(extra: bool) -> AnyPKI {
         let out = AnyPKI::new();
 
-        let mitm =
+        let avoid_mitm =
             if extra {
                 Self::mitm_threats_extra()
             } else {
                 Self::mitm_threats()
             };
 
-        for fp in mozilla::FINGERPRINT_LIST.iter() {
-            let f = Filter::Fingerprint(*fp);
-            if mitm.blacklist.contains(&f) {
-                continue;
+        for x509cert in mozilla_root_ca::x509cert_list() {
+            let cert: Certificate = x509cert.into();
+            if avoid_mitm.is_valid(cert.clone()) {
+                out.allow(cert);
             }
-            out.allow(*fp);
         }
 
         out

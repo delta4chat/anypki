@@ -2,22 +2,27 @@ use crate::*;
 
 #[test]
 fn moz() {
-    eprintln!("Mozilla Original CAs: {:?}", rules::source::mozilla::FINGERPRINT_LIST.len());
+    eprintln!("Mozilla Original CAs: {:?}", mozilla_root_ca::x509cert_list().len());
 
     let m = DefaultRules::mitm_threats_extra();
     let ak = DefaultRules::mozilla_without_suspicious(true);
     eprintln!("Filtered (MITM_EXTRA): {:?}", ak.whitelist.len());
 
-    let mut tp = Vec::new();
+    let mut tp = String::new();
+
     ak.whitelist.scan(|f| {
         match f.as_ref() {
-            Filter::Fingerprint(fp) => {
-                tp.push(hex::encode(fp.as_ref()));
+            Filter::Certificate(cert) => {
+                tp.push_str(hex::encode(cert.0.sha256_fingerprint().unwrap()).as_ref());
+                tp.push_str("|");
             }
-            _=>{}
+            _ => {}
         }
     });
-    eprintln!("trustedpki: {}", format!("{tp:?}").replace(" ", ""));
+    if ! tp.is_empty() {
+        tp.pop();
+    }
+    eprintln!("trustedpki: {tp}");
 
     m.blacklist.scan(|cert| {
         assert!(ak.whitelist.contains(cert) == false);

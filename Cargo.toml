@@ -15,16 +15,25 @@ native-tls = ["dep:native-tls"]
 
 [dependencies]
 anyhow = { version = "1.0.93", features = ["backtrace"] }
-bcder = "0.7.4"
-country-code-enum = "0.2.0"
+
+
 hex = "0.4.3"
 hex-literal = "0.4.1"
+
+country-code-enum = "0.2.0"
+bcder = "0.7.4"
+
 native-tls = { optional = true, version = "0.2.12", default-features = false, features = ["alpn", "vendored"] }
 rustls-pki-types = "1.10.0"
+
 scc = "2.2.5"
+
 slice-find = "0.0.1"
+
 x509cert = "0.25.1"
 #x509cert = { path = "../cryptography-rs/x509-certificate/" }
+
+mozilla-root-ca = { version = ">=0.0.0", features = ["x509cert", "pem"] }
 
 [profile.release]
 panic = "unwind"
