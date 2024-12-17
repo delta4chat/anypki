@@ -21,7 +21,7 @@ impl DefaultRules {
             };
 
         for x509cert in mozilla_root_ca::x509cert_list() {
-            let cert: Certificate = x509cert.into();
+            let cert: Certificate = x509cert.clone().into();
             if avoid_mitm.is_valid(cert.clone()) {
                 out.allow(cert);
             }
