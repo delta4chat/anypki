@@ -1,8 +1,5 @@
 #!/bin/bash
 
-outdir="$(realpath .)"
-outfile="${outdir}/revoke_suspicious_certs.rs"
-
 set -e
 set -x
 
@@ -13,8 +10,14 @@ type unzip
 type curl
 type sha1sum
 type awk
+type realpath
+type find
+type sort
 type rm
 type mv
+
+outdir="$(realpath .)"
+outfile="${outdir}/revoke_suspicious_certs.rs"
 
 tmp="$(mktemp -d -t anypkiRulesBlacklistCertUpdater.XXXXXXXX)"
 trap "rm -rfv $tmp" EXIT
@@ -25,7 +28,7 @@ unzip rsc.zip
 
 echo "use crate::*;" > rs.tmp.out
 echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> rs.tmp.out
-for cert in $(find -type f -name '*.crt')
+for cert in $(find -type f -name '*.crt' | sort)
 do
 	echo "/*"
 	openssl x509 -in $cert -noout -serial -issuer -subject -sha1 -fingerprint

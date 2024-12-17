@@ -1,16 +1,18 @@
 #!/bin/bash
 
-outdir="$(realpath .)"
-outfile="${outdir}/caprogram_360.rs"
-
 set -e
 set -x
 
 type jq
 type mktemp
 type curl
+type cat
+type realpath
 type rm
 type mv
+
+outdir="$(realpath .)"
+outfile="${outdir}/caprogram_360.rs"
 
 tmp="$(mktemp -d -t anypkiRulesBlacklistCertUpdater.XXXXXXXX)"
 trap "rm -rfv $tmp" EXIT
