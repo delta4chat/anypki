@@ -320,6 +320,9 @@ impl Filter {
 pub struct AnyPKI {
     blacklist: Arc<scc::HashSet<Arc<Filter>>>,
     whitelist: Arc<scc::HashSet<Arc<Filter>>>,
+
+    #[cfg(feature="rustls-verifier")]
+    rustls_rcs: Arc<rustls::RootCertStore>,
 }
 impl Default for AnyPKI {
     fn default() -> Self {
@@ -332,6 +335,9 @@ impl AnyPKI {
         Self {
             blacklist: Arc::new(scc::HashSet::new()),
             whitelist: Arc::new(scc::HashSet::new()),
+
+            #[cfg(feature="rustls-verifier")]
+            rustls_rcs: Arc::new(rustls::RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() }),
         }
     }
 
@@ -425,5 +431,61 @@ impl AnyPKI {
     pub fn retain(&self, list: &mut Vec<impl TryInto<Certificate>+Clone>) {
         list.retain(|cert| { self.is_valid(cert.clone()) })
     }
+
+
 }
 
+#[cfg(feature="rustls-verifier")]
+mod _rustls_verifier_impl {
+    use super::*;
+    use rustls::{
+        Error,
+        pki_types::{
+            CertificateDer,
+            UnixTime,
+            ServerName,
+        },
+        DigitallySignedStruct,
+        SignatureScheme,
+        client::danger::{
+            ServerCertVerifier,
+            HandshakeSignatureValid,
+            ServerCertVerified,
+        },
+    };
+    #[cfg(feature="rustls-verifier")]
+    impl ServerCertVerifier for AnyPKI {
+        fn verify_server_cert(
+            &self,
+            end_entity: &CertificateDer<'_>,
+            intermediates: &[CertificateDer<'_>],
+            server_name: &ServerName<'_>,
+            ocsp_response: &[u8],
+            now: UnixTime,
+        ) -> Result<ServerCertVerified, Error> {
+            todo!();
+        }
+
+        fn verify_tls12_signature(
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, Error> {
+            todo!();
+        }
+
+        fn verify_tls13_signature(
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, Error> {
+            todo!();
+        }
+
+        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+            todo!();
+        }
+    }
+}

@@ -12,6 +12,7 @@ repository="https://github.com/delta4chat/anypki"
 [features]
 default = []
 native-tls = ["dep:native-tls"]
+rustls-verifier = ["dep:rustls", "dep:webpki-roots"]
 
 [dependencies]
 anyhow = { version = "1.0.93", features = ["backtrace"] }
@@ -34,6 +35,8 @@ x509cert = "0.25.1"
 #x509cert = { path = "../cryptography-rs/x509-certificate/" }
 
 mozilla-root-ca = { version = ">=0.0.0", features = ["x509cert", "pem"] }
+rustls = { version = "0.23.21", optional = true, default-features = false }
+webpki-roots = { version = "0.26.7", default-features = false, optional = true }
 
 [profile.release]
 panic = "unwind"
