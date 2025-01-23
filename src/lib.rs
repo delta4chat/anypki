@@ -332,6 +332,10 @@ pub struct AnyPKI {
 
     #[cfg(feature="rustls-verifier")]
     rustls_rcs: Arc<rustls::RootCertStore>,
+    #[cfg(feature="rustls-verifier")]
+    rustls_sv: Arc<scc::Stack<Arc<dyn rustls::client::danger::ServerCertVerifier>>>,
+    #[cfg(feature="rustls-verifier")]
+    rustls_cv: Option<(Arc<dyn rustls::server::danger::ClientCertVerifier>, Arc<Vec<rustls::DistinguishedName>>)>,
 }
 impl Default for AnyPKI {
     fn default() -> Self {
@@ -347,6 +351,10 @@ impl AnyPKI {
 
             #[cfg(feature="rustls-verifier")]
             rustls_rcs: Arc::new(rustls::RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() }),
+            #[cfg(feature="rustls-verifier")]
+            rustls_sv: Arc::new(Default::default()),
+            #[cfg(feature="rustls-verifier")]
+            rustls_cv: None,
         }
     }
 
@@ -448,6 +456,7 @@ mod _rustls_verifier_impl {
     use rustls::{
         Error,
         CertificateError,
+        DistinguishedName,
         pki_types::{
             CertificateDer,
             UnixTime,
@@ -463,13 +472,58 @@ mod _rustls_verifier_impl {
                 ServerCertVerified,
             },
         },
+        server::{
+            //ClientCertVerifierBuilder,
+            danger::{
+                ClientCertVerifier,
+                ClientCertVerified,
+            },
+        },
     };
 
     impl AnyPKI {
-        pub fn verifier(&self) -> Result<Arc<WebPkiServerVerifier>, Error> {
-            WebPkiServerVerifier::builder(self.rustls_rcs.clone())
-            .build()
-            .map_err(|err| { Error::General(err.to_string()) })
+        /* == public setters == */
+
+        /// Provide ServerCertVerifier
+        pub fn server_cert_verifier(&self, verifier: Arc<dyn ServerCertVerifier>) -> Self {
+            let _ = self.rustls_sv.push(verifier);
+            self.clone()
+        }
+        /// Provide ClientCertVerifier
+        pub fn client_cert_verifier(&mut self, verifier: Arc<dyn ClientCertVerifier>) -> Self {
+            let rhs = Arc::new(verifier.root_hint_subjects().to_vec());
+            self.rustls_cv = Some((verifier, rhs));
+            self.clone()
+        }
+
+        /* == private getters for trait == */
+        fn _server_cert_verifier(&self) -> Result<Arc<dyn ServerCertVerifier>, Error> {
+            if let Some(v) = self.rustls_sv.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
+                Ok(v)
+            } else {
+                WebPkiServerVerifier::builder(self.rustls_rcs.clone())
+                .build()
+                .map(|x| {
+                    /*
+                     * https://users.rust-lang.org/t/what-does-rust-error-you-could-box-the-found-value-and-coerce-it-to-the-trait-object-mean/112732
+                     * https://safereddit.com/r/rust/comments/199cwx8/arcimpl_t_boxdyn_t/
+                     */
+
+                    let x: Arc<dyn ServerCertVerifier> = x;
+                    x
+                })
+                .map_err(|err| { Error::General(err.to_string()) })
+            }
+        }
+
+        fn _client_cert_verifier(&self)
+            -> Result<(Arc<dyn ClientCertVerifier>, &[DistinguishedName]), Error>
+        {
+            if let Some(ref v) = self.rustls_cv {
+                Ok((v.0.clone(), &v.1))
+            } else {
+                Err(Error::General(String::from("No ClientCertVerifier provided")))
+            }
         }
     }
 
@@ -491,7 +545,7 @@ mod _rustls_verifier_impl {
                     return err;
                 }
             }
-            self.verifier()?
+            self._server_cert_verifier()?
                 .verify_server_cert(
                     end_entity,
                     intermediates,
@@ -510,7 +564,7 @@ mod _rustls_verifier_impl {
             if ! self.is_valid(cert) {
                 return Err(Error::InvalidCertificate(CertificateError::Revoked));
             }
-            self.verifier()?.verify_tls12_signature(message, cert, dss)
+            self._server_cert_verifier()?.verify_tls12_signature(message, cert, dss)
         }
 
         fn verify_tls13_signature(
@@ -522,15 +576,76 @@ mod _rustls_verifier_impl {
             if ! self.is_valid(cert) {
                 return Err(Error::InvalidCertificate(CertificateError::Revoked));
             }
-            self.verifier()?.verify_tls13_signature(message, cert, dss)
+            self._server_cert_verifier()?.verify_tls13_signature(message, cert, dss)
         }
 
         fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-            if let Ok(v) = self.verifier() {
+            if let Ok(v) = self._server_cert_verifier() {
                 v.supported_verify_schemes()
             } else {
                 Vec::new()
             }
         }
     }
+
+    impl ClientCertVerifier for AnyPKI {
+        fn verify_client_cert(
+            &self,
+            end_entity: &CertificateDer<'_>,
+            intermediates: &[CertificateDer<'_>],
+            now: UnixTime,
+        ) -> Result<ClientCertVerified, Error> {
+            let err = Err(Error::InvalidCertificate(CertificateError::Revoked));
+            if ! self.is_valid(end_entity) {
+                return err;
+            }
+            for im in intermediates.iter() {
+                if ! self.is_valid(im) {
+                    return err;
+                }
+            }
+            self._client_cert_verifier()?.0.verify_client_cert(end_entity, intermediates, now)
+        }
+
+        fn verify_tls12_signature(
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, Error> {
+            if ! self.is_valid(cert) {
+                return Err(Error::InvalidCertificate(CertificateError::Revoked));
+            }
+            self._client_cert_verifier()?.0.verify_tls12_signature(message, cert, dss)
+        }
+
+        fn verify_tls13_signature(
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, Error> {
+            if ! self.is_valid(cert) {
+                return Err(Error::InvalidCertificate(CertificateError::Revoked));
+            }
+            self._client_cert_verifier()?.0.verify_tls13_signature(message, cert, dss)
+        }
+
+        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+            if let Ok(ref v) = self._client_cert_verifier() {
+                v.0.supported_verify_schemes()
+            } else {
+                Vec::new()
+            }
+        }
+
+        fn root_hint_subjects(&self) -> &[DistinguishedName] {
+            if let Ok(ref v) = self._client_cert_verifier() {
+                v.1
+            } else {
+                &[]
+            }
+        }
+    }
+
 }
