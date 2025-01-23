@@ -53,6 +53,15 @@ impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
     }
 }
 
+impl TryFrom<&rustls_pki_types::CertificateDer<'_>> for Certificate {
+    type Error = anyhow::Error;
+
+    #[inline(always)]
+    fn try_from(val: &rustls_pki_types::CertificateDer<'_>) -> anyhow::Result<Self> {
+        val.deref().try_into()
+    }
+}
+
 #[cfg(feature="native-tls")]
 impl TryFrom<native_tls::Certificate> for Certificate {
     type Error = anyhow::Error;
@@ -431,8 +440,6 @@ impl AnyPKI {
     pub fn retain(&self, list: &mut Vec<impl TryInto<Certificate>+Clone>) {
         list.retain(|cert| { self.is_valid(cert.clone()) })
     }
-
-
 }
 
 #[cfg(feature="rustls-verifier")]
@@ -440,6 +447,7 @@ mod _rustls_verifier_impl {
     use super::*;
     use rustls::{
         Error,
+        CertificateError,
         pki_types::{
             CertificateDer,
             UnixTime,
@@ -447,13 +455,24 @@ mod _rustls_verifier_impl {
         },
         DigitallySignedStruct,
         SignatureScheme,
-        client::danger::{
-            ServerCertVerifier,
-            HandshakeSignatureValid,
-            ServerCertVerified,
+        client::{
+            WebPkiServerVerifier,
+            danger::{
+                ServerCertVerifier,
+                HandshakeSignatureValid,
+                ServerCertVerified,
+            },
         },
     };
-    #[cfg(feature="rustls-verifier")]
+
+    impl AnyPKI {
+        pub fn verifier(&self) -> Result<Arc<WebPkiServerVerifier>, Error> {
+            WebPkiServerVerifier::builder(self.rustls_rcs.clone())
+            .build()
+            .map_err(|err| { Error::General(err.to_string()) })
+        }
+    }
+
     impl ServerCertVerifier for AnyPKI {
         fn verify_server_cert(
             &self,
@@ -463,7 +482,23 @@ mod _rustls_verifier_impl {
             ocsp_response: &[u8],
             now: UnixTime,
         ) -> Result<ServerCertVerified, Error> {
-            todo!();
+            let err = Err(Error::InvalidCertificate(CertificateError::Revoked));
+            if ! self.is_valid(end_entity) {
+                return err;
+            }
+            for im in intermediates.iter() {
+                if ! self.is_valid(im) {
+                    return err;
+                }
+            }
+            self.verifier()?
+                .verify_server_cert(
+                    end_entity,
+                    intermediates,
+                    server_name,
+                    ocsp_response,
+                    now
+                )
         }
 
         fn verify_tls12_signature(
@@ -472,7 +507,10 @@ mod _rustls_verifier_impl {
             cert: &CertificateDer<'_>,
             dss: &DigitallySignedStruct,
         ) -> Result<HandshakeSignatureValid, Error> {
-            todo!();
+            if ! self.is_valid(cert) {
+                return Err(Error::InvalidCertificate(CertificateError::Revoked));
+            }
+            self.verifier()?.verify_tls12_signature(message, cert, dss)
         }
 
         fn verify_tls13_signature(
@@ -481,11 +519,18 @@ mod _rustls_verifier_impl {
             cert: &CertificateDer<'_>,
             dss: &DigitallySignedStruct,
         ) -> Result<HandshakeSignatureValid, Error> {
-            todo!();
+            if ! self.is_valid(cert) {
+                return Err(Error::InvalidCertificate(CertificateError::Revoked));
+            }
+            self.verifier()?.verify_tls13_signature(message, cert, dss)
         }
 
         fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-            todo!();
+            if let Ok(v) = self.verifier() {
+                v.supported_verify_schemes()
+            } else {
+                Vec::new()
+            }
         }
     }
 }

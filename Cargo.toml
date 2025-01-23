@@ -17,7 +17,6 @@ rustls-verifier = ["dep:rustls", "dep:webpki-roots"]
 [dependencies]
 anyhow = { version = "1.0.93", features = ["backtrace"] }
 
-
 hex = "0.4.3"
 hex-literal = "0.4.1"
 
@@ -35,8 +34,8 @@ x509cert = "0.25.1"
 #x509cert = { path = "../cryptography-rs/x509-certificate/" }
 
 mozilla-root-ca = { version = ">=0.0.0", features = ["x509cert", "pem"] }
-rustls = { version = "0.23.21", optional = true, default-features = false }
-webpki-roots = { version = "0.26.7", default-features = false, optional = true }
+rustls = { optional = true, version = "0.23.21", default-features = false }
+webpki-roots = { optional = true, version = "0.26.7", default-features = false }
 
 [profile.release]
 panic = "unwind"
