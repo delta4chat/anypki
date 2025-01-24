@@ -36,29 +36,41 @@ impl From<Certificate> for X509Certificate {
     }
 }
 
-/*
-impl TryFrom<rustls_pki_types::TrustAnchor<'_>> for Certificate {
-    type Error = anyhow::Error;
-    fn try_from(val: rustls_pki_types::TrustAnchor<'_>) -> anyhow::Result<Self> {
-        val.subject.deref().try_into()
-    }
-}
-*/
 impl TryFrom<rustls_pki_types::CertificateDer<'_>> for Certificate {
     type Error = anyhow::Error;
 
     #[inline(always)]
     fn try_from(val: rustls_pki_types::CertificateDer<'_>) -> anyhow::Result<Self> {
-        val.deref().try_into()
+        let val: &[u8] = val.deref();
+        val.try_into()
     }
 }
-
 impl TryFrom<&rustls_pki_types::CertificateDer<'_>> for Certificate {
     type Error = anyhow::Error;
 
     #[inline(always)]
     fn try_from(val: &rustls_pki_types::CertificateDer<'_>) -> anyhow::Result<Self> {
-        val.deref().try_into()
+        let val: &[u8] = val.deref();
+        val.try_into()
+    }
+}
+
+impl TryFrom<rustls_pki_types::Der<'_>> for Certificate {
+    type Error = anyhow::Error;
+
+    #[inline(always)]
+    fn try_from(val: rustls_pki_types::Der<'_>) -> anyhow::Result<Self> {
+        let val: &[u8] = val.deref();
+        val.try_into()
+    }
+}
+impl TryFrom<&rustls_pki_types::Der<'_>> for Certificate {
+    type Error = anyhow::Error;
+
+    #[inline(always)]
+    fn try_from(val: &rustls_pki_types::Der<'_>) -> anyhow::Result<Self> {
+        let val: &[u8] = val.deref();
+        val.try_into()
     }
 }
 
@@ -136,12 +148,15 @@ impl core::fmt::Debug for Fingerprint {
     }
 }
 impl PartialEq<[u8]> for Fingerprint {
+    #[inline(always)]
     fn eq(&self, other: &[u8]) -> bool {
-        self.as_ref() == other
+        let val: &[u8] = self.as_ref();
+        val == other
     }
 }
 
 impl AsRef<[u8]> for Fingerprint {
+    #[inline(always)]
     fn as_ref(&self) -> &[u8] {
         use Fingerprint::*;
         match self {
@@ -193,6 +208,15 @@ impl<const N: usize> TryFrom<&[u8; N]> for Fingerprint {
         val.try_into()
     }
 }
+impl<const N: usize> TryFrom<[u8; N]> for Fingerprint {
+    type Error = anyhow::Error;
+
+    #[inline(always)]
+    fn try_from(val: [u8; N]) -> anyhow::Result<Self> {
+        let val: &[u8] = val.as_ref();
+        val.try_into()
+    }
+}
 
 impl From<&Fingerprint> for DigestAlgorithm {
     #[inline(always)]
@@ -220,6 +244,9 @@ pub enum Filter {
     Name(String),
     SignatureAlgorithm(SignatureAlgorithm),
     KeyAlgorithm(KeyAlgorithm),
+
+    /// Special filter that will only matches if all provided filters are matched, otherwise the return value is considered to be false. like to cfg(all(...))
+    All(Vec<Filter>),
 }
 
 macro_rules! filter_from_inner_impl {
@@ -233,23 +260,35 @@ macro_rules! filter_from_inner_impl {
     };
 }
 
-
 filter_from_inner_impl!(Certificate, Certificate);
 filter_from_inner_impl!(CountryCode, CountryCode);
 filter_from_inner_impl!(PublicKey, Vec<u8>);
+
 filter_from_inner_impl!(SerialNumber, bcder::int::Integer);
 filter_from_inner_impl!(Fingerprint, Fingerprint);
 filter_from_inner_impl!(Name, String);
 filter_from_inner_impl!(SignatureAlgorithm, SignatureAlgorithm);
 filter_from_inner_impl!(KeyAlgorithm, KeyAlgorithm);
 
+filter_from_inner_impl!(All, Vec<Filter>);
+
 impl Filter {
     #[inline(always)]
-    pub fn matches(&self, cert: &Certificate) -> bool {
-        let cert = &cert.0;
+    pub fn matches(&self, certificate: &Certificate) -> bool {
+        let cert = &certificate.0;
 
         use Filter::*;
         match self {
+            All(filters) => {
+                // this is necessary due to iter().all() will returns true if iterator is empty.
+                // https://doc.rust-lang.org/1.84.0/src/core/slice/iter/macros.rs.html#262
+                if filters.is_empty() {
+                    return false;
+                } else {
+                    return filters.iter().all(|f| { f.matches(certificate) });
+                }
+            },
+
             Certificate(c) => {
                 return &c.0 == cert;
             },
@@ -324,7 +363,7 @@ impl Filter {
     }
 }
 
-/// A builder style for building a set of certificates.
+/// A builder style struct for building a set of certificates.
 #[derive(Debug, Clone)]
 pub struct AnyPKI {
     blacklist: Arc<scc::HashSet<Arc<Filter>>>,
@@ -338,6 +377,7 @@ pub struct AnyPKI {
     rustls_cv: Option<(Arc<dyn rustls::server::danger::ClientCertVerifier>, Arc<Vec<rustls::DistinguishedName>>)>,
 }
 impl Default for AnyPKI {
+    #[inline(always)]
     fn default() -> Self {
         Self::new()
     }
@@ -485,11 +525,13 @@ mod _rustls_verifier_impl {
         /* == public setters == */
 
         /// Provide ServerCertVerifier
+        #[inline(always)]
         pub fn server_cert_verifier(&self, verifier: Arc<dyn ServerCertVerifier>) -> Self {
             let _ = self.rustls_sv.push(verifier);
             self.clone()
         }
         /// Provide ClientCertVerifier
+        #[inline(always)]
         pub fn client_cert_verifier(&mut self, verifier: Arc<dyn ClientCertVerifier>) -> Self {
             let rhs = Arc::new(verifier.root_hint_subjects().to_vec());
             self.rustls_cv = Some((verifier, rhs));
@@ -497,6 +539,7 @@ mod _rustls_verifier_impl {
         }
 
         /* == private getters for trait == */
+        #[inline(always)]
         fn _server_cert_verifier(&self) -> Result<Arc<dyn ServerCertVerifier>, Error> {
             if let Some(v) = self.rustls_sv.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
                 Ok(v)
@@ -516,6 +559,7 @@ mod _rustls_verifier_impl {
             }
         }
 
+        #[inline(always)]
         fn _client_cert_verifier(&self)
             -> Result<(Arc<dyn ClientCertVerifier>, &[DistinguishedName]), Error>
         {
@@ -528,6 +572,7 @@ mod _rustls_verifier_impl {
     }
 
     impl ServerCertVerifier for AnyPKI {
+        #[inline(always)]
         fn verify_server_cert(
             &self,
             end_entity: &CertificateDer<'_>,
@@ -555,6 +600,7 @@ mod _rustls_verifier_impl {
                 )
         }
 
+        #[inline(always)]
         fn verify_tls12_signature(
             &self,
             message: &[u8],
@@ -567,6 +613,7 @@ mod _rustls_verifier_impl {
             self._server_cert_verifier()?.verify_tls12_signature(message, cert, dss)
         }
 
+        #[inline(always)]
         fn verify_tls13_signature(
             &self,
             message: &[u8],
@@ -579,6 +626,7 @@ mod _rustls_verifier_impl {
             self._server_cert_verifier()?.verify_tls13_signature(message, cert, dss)
         }
 
+        #[inline(always)]
         fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
             if let Ok(v) = self._server_cert_verifier() {
                 v.supported_verify_schemes()
@@ -589,6 +637,7 @@ mod _rustls_verifier_impl {
     }
 
     impl ClientCertVerifier for AnyPKI {
+        #[inline(always)]
         fn verify_client_cert(
             &self,
             end_entity: &CertificateDer<'_>,
@@ -607,6 +656,7 @@ mod _rustls_verifier_impl {
             self._client_cert_verifier()?.0.verify_client_cert(end_entity, intermediates, now)
         }
 
+        #[inline(always)]
         fn verify_tls12_signature(
             &self,
             message: &[u8],
@@ -619,6 +669,7 @@ mod _rustls_verifier_impl {
             self._client_cert_verifier()?.0.verify_tls12_signature(message, cert, dss)
         }
 
+        #[inline(always)]
         fn verify_tls13_signature(
             &self,
             message: &[u8],
@@ -631,6 +682,7 @@ mod _rustls_verifier_impl {
             self._client_cert_verifier()?.0.verify_tls13_signature(message, cert, dss)
         }
 
+        #[inline(always)]
         fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
             if let Ok(ref v) = self._client_cert_verifier() {
                 v.0.supported_verify_schemes()
@@ -639,6 +691,7 @@ mod _rustls_verifier_impl {
             }
         }
 
+        #[inline(always)]
         fn root_hint_subjects(&self) -> &[DistinguishedName] {
             if let Ok(ref v) = self._client_cert_verifier() {
                 v.1
@@ -647,5 +700,4 @@ mod _rustls_verifier_impl {
             }
         }
     }
-
 }

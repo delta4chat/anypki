@@ -33,7 +33,7 @@ slice-find = "0.0.1"
 x509cert = "0.25.1"
 #x509cert = { path = "../cryptography-rs/x509-certificate/" }
 
-mozilla-root-ca = { version = ">=0.0.0", features = ["x509cert", "pem"] }
+mozilla-root-ca = { version = ">=0.0.0", features = ["x509cert", "pem"], default-features = false }
 rustls = { optional = true, version = "0.23.21", default-features = false }
 webpki-roots = { optional = true, version = "0.26.7", default-features = false }
 

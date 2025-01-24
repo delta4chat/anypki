@@ -22,7 +22,7 @@ fn moz() {
     if ! tp.is_empty() {
         tp.pop();
     }
-    eprintln!("trustedpki: {tp}");
+    //eprintln!("trustedpki: {tp}");
 
     m.blacklist.scan(|cert| {
         assert!(ak.whitelist.contains(cert) == false);
@@ -36,12 +36,7 @@ fn moz() {
     });
 }
 
-#[test]
-fn is_valid() {
-    let ak = DefaultRules::mitm_threats_extra();
-
-    // CFCA (CA), filtered by country code
-    let should_invalid = ak.is_valid(b"-----BEGIN CERTIFICATE-----
+const CFCA: &[u8] = b"-----BEGIN CERTIFICATE-----
 MIIFjTCCA3WgAwIBAgIEGErM1jANBgkqhkiG9w0BAQsFADBWMQswCQYDVQQGEwJD
 TjEwMC4GA1UECgwnQ2hpbmEgRmluYW5jaWFsIENlcnRpZmljYXRpb24gQXV0aG9y
 aXR5MRUwEwYDVQQDDAxDRkNBIEVWIFJPT1QwHhcNMTIwODA4MDMwNzAxWhcNMjkx
@@ -72,11 +67,9 @@ Ci77o0cOPaYjesYBx4/IXr9tgFa+iiS6M+qf4TIRnvHST4D2G0CvOJ4RUHlzEhLN
 /v5WOaHIz16eGWRGENoXkbcFgKyLmZJ956LYBws2J+dIeWCKw9cTXPhyQN9Ky8+Z
 AAoACxGV2lZFA4gKn2fQ1XmxqI1AbQ3CekD6819kR5LLU7m7Wc5P/dAVUwHY3+vZ
 5nbv0CO7O6l5s9UCKc2Jo5YPSjXnTkLAdc0Hz+Ys63su
------END CERTIFICATE-----");
-    assert!(dbg!(should_invalid) == false);
+-----END CERTIFICATE-----";
 
-    // github.com MITM cert (leaf), filtered by fingerprint
-    let should_invalid = ak.is_valid(b"-----BEGIN CERTIFICATE-----
+const GITHUB_MITM: &[u8] = b"-----BEGIN CERTIFICATE-----
 MIICszCCAhygAwIBAgIBAzANBgkqhkiG9w0BAQUFADBhMQswCQYDVQQGEwJVUzET
 MBEGA1UECAwKU29tZS1TdGF0ZTETMBEGA1UECgwKZ2l0aHViLmNvbTETMBEGA1UE
 CwwKZ2l0aHViLmNvbTETMBEGA1UEAwwKZ2l0aHViLmNvbTAeFw0xMzAxMjUwNjI5
@@ -92,11 +85,9 @@ KBU3wAzcCtFAf2aj5ZRAdbXnwpgwDQYJKoZIhvcNAQEFBQADgYEAkPy6u/FEezIz
 ZHESozwidrcEsBSUd9pZC1voib/RpM4/KneJnY3PygOiLkPgjVq5+YephIpSwCOg
 Nr0BFgZIwmra/0EWfL6CJb1wl8qJKShfWyv3en9FiZwhACbJf53TRzdq0zAi5s0H
 dU/SlEQPUcNwE2HkLxNTCqU0xcwC7uo=
------END CERTIFICATE-----");
-    assert!(dbg!(should_invalid) == false);
+-----END CERTIFICATE-----";
 
-    // WoTrust (CA), filtered by fingerprint
-    let should_invalid = ak.is_valid(b"-----BEGIN CERTIFICATE-----
+const WO_TRUST: &[u8] = b"-----BEGIN CERTIFICATE-----
 MIIEXzCCA0egAwIBAgIQJGs6VJEx1baIXJdYH+rCcTANBgkqhkiG9w0BAQUFADCB
 lzELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAlVUMRcwFQYDVQQHEw5TYWx0IExha2Ug
 Q2l0eTEeMBwGA1UEChMVVGhlIFVTRVJUUlVTVCBOZXR3b3JrMSEwHwYDVQQLExho
@@ -121,11 +112,9 @@ Sp2QLsFa/DwZzBPja1xy62fOyXBlGZtVLd20A8T32dKf4X7O6JJHTQz+XJZixLR3
 7yLfkxivymtFt/tSIYw4jW4fCRvndVM5DDciPavJvSYgsqDRHWgKEE1Qg2Gjlnwe
 gx81uzGbH0UMoUZCB62Zzc7IxfAHv1ifpg/6hChlCV0rLJoS/c/yGTbSLb5sYlaI
 BrXE2Wa+Sg/HwbIWJLqj9455Bg==
------END CERTIFICATE-----");
-    assert!(dbg!(should_invalid) == false);
+-----END CERTIFICATE-----";
 
-    // ISRG Root X1 (CA), should valid
-    let should_valid = ak.is_valid(b"-----BEGIN CERTIFICATE-----
+const ISRG_ROOT_X1: &[u8] = b"-----BEGIN CERTIFICATE-----
 MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAwTzELMAkGA1UE
 BhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2VhcmNoIEdyb3VwMRUwEwYDVQQD
 EwxJU1JHIFJvb3QgWDEwHhcNMTUwNjA0MTEwNDM4WhcNMzUwNjA0MTEwNDM4WjBPMQswCQYDVQQG
@@ -151,8 +140,53 @@ JzVcoyi3B43njTOQ5yOf+1CceWxG1bQVs5ZufpsMljq4Ui0/1lvh+wjChP4kqKOJ2qxq4RgqsahD
 YVvTH9w7jXbyLeiNdd8XM2w9U/t7y0Ff/9yi0GE44Za4rF2LN9d11TPAmRGunUHBcnWEvgJBQl9n
 JEiU0Zsnvgc/ubhPgXRR4Xq37Z0j4r7g1SgEEzwxA57demyPxgcYxn/eR44/KJ4EBs+lVDR3veyJ
 m+kXQ99b21/+jh5Xos1AnX5iItreGCc=
------END CERTIFICATE-----");
+-----END CERTIFICATE-----";
+
+#[test]
+fn is_valid() {
+    let ak = DefaultRules::mitm_threats_extra();
+
+    // CFCA (CA), filtered by country code
+    let should_invalid = ak.is_valid(CFCA);
+    assert!(dbg!(should_invalid) == false);
+
+    // github.com MITM cert (leaf), filtered by fingerprint
+    let should_invalid = ak.is_valid(GITHUB_MITM);
+    assert!(dbg!(should_invalid) == false);
+
+    // WoTrust (CA), filtered by fingerprint
+    let should_invalid = ak.is_valid(WO_TRUST);
+    assert!(dbg!(should_invalid) == false);
+
+    // ISRG Root X1 (CA), should valid
+    let should_valid = ak.is_valid(ISRG_ROOT_X1);
 
     assert!(dbg!(should_valid) == true);
 }
 
+#[test]
+fn multi_filters() {
+    /*
+    serial=246B3A549131D5B6885C97581FEAC271
+    issuer=C = US, ST = UT, L = Salt Lake City, O = The USERTRUST Network, OU = http://www.usertrust.com, CN = UTN-USERFirst-Hardware
+    subject=C = US, O = "Wotone Communications, Inc.", CN = WoTrust Server Authority
+    sha1 Fingerprint=33:7D:F9:64:18:F0:8A:93:55:87:05:13:AF:CE:BD:C6:8B:CE:D7:67
+    sha256 Fingerprint=2C:A1:BF:84:73:64:11:F0:E1:2A:BB:38:72:7B:5F:DE:33:99:F1:ED:C4:3D:79:C4:DF:2A:A9:32:16:C3:3F:1B
+    */
+    let f1 = Filter::CountryCode(country_code_enum::CountryCode::US);
+    let f2 = Filter::Name("Wotone Communications".to_string());
+    let f3 = Filter::Fingerprint(hex!("337DF96418F08A9355870513AFCEBDC68BCED767").try_into().unwrap());
+    let f = Filter::All(vec![f1, f2, f3]);
+
+    let wo_trust: Certificate = WO_TRUST.try_into().unwrap();
+    let should_match = f.matches(&wo_trust);
+    assert!(dbg!(should_match) == true);
+
+    let isrg_root_x1: Certificate = ISRG_ROOT_X1.try_into().unwrap();
+    let should_mismatch = f.matches(&isrg_root_x1);
+    assert!(dbg!(should_mismatch) == false);
+
+    let f = Filter::All(vec![]);
+    let should_mismatch = f.matches(&wo_trust);
+    assert!(dbg!(should_mismatch) == false);
+}
