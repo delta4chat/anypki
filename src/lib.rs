@@ -486,7 +486,7 @@ impl AnyPKI {
     /// retain provided Vec to make sure it only contains valid certificates.
     #[inline(always)]
     pub fn retain(&self, list: &mut Vec<impl TryInto<Certificate>+Clone>) {
-        list.retain(|cert| { self.is_valid(cert.clone()) })
+        list.retain(|to_cert| { self.is_valid(to_cert.clone()) })
     }
 }
 

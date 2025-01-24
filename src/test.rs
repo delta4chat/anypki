@@ -1,5 +1,6 @@
 use crate::*;
 
+#[cfg(feature="mozilla-root-ca")]
 #[test]
 fn moz() {
     eprintln!("Mozilla Original CAs: {:?}", mozilla_root_ca::x509cert_list().len());

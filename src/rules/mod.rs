@@ -9,6 +9,7 @@ pub struct DefaultRules;
 // https://en.wikipedia.org/wiki/Internet_censorship_and_surveillance_by_country
 impl DefaultRules {
     /// whitelisting the root CAs from Mozilla PKI Store, but exclude all suspicious certificates.
+    #[cfg(feature="mozilla-root-ca")]
     #[inline(always)]
     pub fn mozilla_without_suspicious(extra: bool) -> AnyPKI {
         let out = AnyPKI::new();
