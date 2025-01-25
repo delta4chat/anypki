@@ -374,7 +374,7 @@ pub struct AnyPKI {
     #[cfg(feature="rustls-verifier")]
     rustls_sv: Arc<scc::Stack<Arc<dyn rustls::client::danger::ServerCertVerifier>>>,
     #[cfg(feature="rustls-verifier")]
-    rustls_cv: Option<(Arc<dyn rustls::server::danger::ClientCertVerifier>, Arc<Vec<rustls::DistinguishedName>>)>,
+    rustls_cv: Arc<scc::Stack<(Arc<dyn rustls::server::danger::ClientCertVerifier>, &'static [rustls::DistinguishedName])>>,
 }
 impl Default for AnyPKI {
     #[inline(always)]
@@ -394,7 +394,7 @@ impl AnyPKI {
             #[cfg(feature="rustls-verifier")]
             rustls_sv: Arc::new(Default::default()),
             #[cfg(feature="rustls-verifier")]
-            rustls_cv: None,
+            rustls_cv: Arc::new(Default::default()),
         }
     }
 
@@ -521,6 +521,8 @@ mod _rustls_verifier_impl {
         },
     };
 
+    static EMPTY_RHS: &'static [DistinguishedName] = &[];
+
     impl AnyPKI {
         /* == public setters == */
 
@@ -531,10 +533,19 @@ mod _rustls_verifier_impl {
             self.clone()
         }
         /// Provide ClientCertVerifier
+        /// ** WARNING: be careful to call this method. if this method called by multiples, that may causes memory leak if allow_memory_leak=true **
         #[inline(always)]
-        pub fn client_cert_verifier(&mut self, verifier: Arc<dyn ClientCertVerifier>) -> Self {
-            let rhs = Arc::new(verifier.root_hint_subjects().to_vec());
-            self.rustls_cv = Some((verifier, rhs));
+        pub fn client_cert_verifier(
+            &self,
+            verifier: Arc<dyn ClientCertVerifier>,
+            allow_memory_leak: bool
+        ) -> Self {
+            if allow_memory_leak {
+                let rhs = Box::leak(Box::new(verifier.root_hint_subjects().to_vec()));
+                let _ = self.rustls_cv.push((verifier, rhs));
+            } else {
+                let _ = self.rustls_cv.push((verifier, EMPTY_RHS));
+            }
             self.clone()
         }
 
@@ -561,10 +572,10 @@ mod _rustls_verifier_impl {
 
         #[inline(always)]
         fn _client_cert_verifier(&self)
-            -> Result<(Arc<dyn ClientCertVerifier>, &[DistinguishedName]), Error>
+            -> Result<(Arc<dyn ClientCertVerifier>, &'static [DistinguishedName]), Error>
         {
-            if let Some(ref v) = self.rustls_cv {
-                Ok((v.0.clone(), &v.1))
+            if let Some(v) = self.rustls_cv.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
+                Ok(v)
             } else {
                 Err(Error::General(String::from("No ClientCertVerifier provided")))
             }
@@ -696,7 +707,7 @@ mod _rustls_verifier_impl {
             if let Ok(ref v) = self._client_cert_verifier() {
                 v.1
             } else {
-                &[]
+                EMPTY_RHS
             }
         }
     }
