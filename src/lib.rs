@@ -366,15 +366,15 @@ impl Filter {
 /// A builder style struct for building a set of certificates.
 #[derive(Debug, Clone)]
 pub struct AnyPKI {
-    blacklist: Arc<scc::HashSet<Arc<Filter>>>,
-    whitelist: Arc<scc::HashSet<Arc<Filter>>>,
+    blacklist: Arc<scc2::HashSet<Arc<Filter>>>,
+    whitelist: Arc<scc2::HashSet<Arc<Filter>>>,
 
     #[cfg(feature="rustls-verifier")]
-    rustls_rcs: Arc<scc::Stack<Arc<rustls::RootCertStore>>>,
+    rustls_rcs: Arc<scc2::Atom<rustls::RootCertStore>>,
     #[cfg(feature="rustls-verifier")]
-    rustls_sv: Arc<scc::Stack<Arc<dyn rustls::client::danger::ServerCertVerifier>>>,
+    rustls_sv: Arc<scc2::Atom<dyn rustls::client::danger::ServerCertVerifier>>,
     #[cfg(feature="rustls-verifier")]
-    rustls_cv: Arc<scc::Stack<(Arc<dyn rustls::server::danger::ClientCertVerifier>, &'static [rustls::DistinguishedName])>>,
+    rustls_cv: Arc<scc2::Atom<(Box<dyn rustls::server::danger::ClientCertVerifier>, &'static [rustls::DistinguishedName])>>,
 }
 impl Default for AnyPKI {
     #[inline(always)]
@@ -386,8 +386,8 @@ impl AnyPKI {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
-            blacklist: Arc::new(scc::HashSet::new()),
-            whitelist: Arc::new(scc::HashSet::new()),
+            blacklist: Arc::new(scc2::HashSet::new()),
+            whitelist: Arc::new(scc2::HashSet::new()),
 
             #[cfg(feature="rustls-verifier")]
             rustls_rcs: Arc::new(Default::default()),
@@ -421,6 +421,8 @@ impl AnyPKI {
         self.blacklist.clear();
         self.whitelist.clear();
 
+
+
         self.clone()
     }
 
@@ -431,12 +433,11 @@ impl AnyPKI {
 
         #[cfg(feature="rustls-verifier")]
         {
-            if let Some(rcs) = other.rustls_rcs.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
+            if let Some(rcs) = other.rustls_rcs.get() {
                 self.root_cert_store(rcs);
             }
             if let Ok(cv) = other._client_cert_verifier() {
-                let _ = self.rustls_cv.pop_all();
-                self.rustls_cv.push(cv);
+                self.rustls_cv.set_arc(cv);
             }
             if let Ok(sv) = other._server_cert_verifier() {
                 self.server_cert_verifier(sv);
@@ -548,16 +549,14 @@ mod _rustls_verifier_impl {
         /// Provide RootCertStore
         #[inline(always)]
         pub fn root_cert_store(&self, rcs: Arc<RootCertStore>) -> Self {
-            let _ = self.rustls_rcs.pop_all();
-            self.rustls_rcs.push(rcs);
+            self.rustls_rcs.set_arc(rcs);
             self.clone()
         }
 
         /// Provide ServerCertVerifier
         #[inline(always)]
         pub fn server_cert_verifier(&self, verifier: Arc<dyn ServerCertVerifier>) -> Self {
-            let _ = self.rustls_sv.pop_all();
-            self.rustls_sv.push(verifier);
+            self.rustls_sv.set_arc(verifier);
             self.clone()
         }
         /// Provide ClientCertVerifier
@@ -565,16 +564,14 @@ mod _rustls_verifier_impl {
         #[inline(always)]
         pub fn client_cert_verifier(
             &self,
-            verifier: Arc<dyn ClientCertVerifier>,
+            verifier: Box<dyn ClientCertVerifier>,
             allow_memory_leak: bool
         ) -> Self {
             if allow_memory_leak {
                 let rhs = Box::leak(Box::new(verifier.root_hint_subjects().to_vec()));
-                let _ = self.rustls_cv.pop_all();
-                self.rustls_cv.push((verifier, rhs));
+                self.rustls_cv.set((verifier, rhs));
             } else {
-                let _ = self.rustls_cv.pop_all();
-                self.rustls_cv.push((verifier, EMPTY_RHS));
+                self.rustls_cv.set((verifier, EMPTY_RHS));
             }
             self.clone()
         }
@@ -583,12 +580,15 @@ mod _rustls_verifier_impl {
 
         #[inline(always)]
         pub(crate) fn _root_cert_store(&self) -> Result<Arc<RootCertStore>, Error> {
-            if self.rustls_rcs.is_empty() {
-                let rcs = Arc::new(RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() });
-                let _ = self.rustls_rcs.push_if(rcs, |x| { x.is_none() });
-            }
+            self.rustls_rcs.update(|maybe_rcs| {
+                if maybe_rcs.is_none() {
+                    Some(RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() })
+                } else {
+                    None
+                }
+            });
 
-            if let Some(rcs) = self.rustls_rcs.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
+            if let Some(rcs) = self.rustls_rcs.get() {
                 Ok(rcs)
             } else {
                 Err(Error::General("Unexpected no RootCertStore".to_string()))
@@ -597,7 +597,7 @@ mod _rustls_verifier_impl {
 
         #[inline(always)]
         pub(crate) fn _server_cert_verifier(&self) -> Result<Arc<dyn ServerCertVerifier>, Error> {
-            if let Some(v) = self.rustls_sv.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
+            if let Some(v) = self.rustls_sv.get() {
                 Ok(v)
             } else {
                 WebPkiServerVerifier::builder(self._root_cert_store()?)
@@ -617,9 +617,9 @@ mod _rustls_verifier_impl {
 
         #[inline(always)]
         pub(crate) fn _client_cert_verifier(&self)
-            -> Result<(Arc<dyn ClientCertVerifier>, &'static [DistinguishedName]), Error>
+            -> Result<Arc<(Box<dyn ClientCertVerifier>, &'static [DistinguishedName])>, Error>
         {
-            if let Some(v) = self.rustls_cv.peek_with(|x| { x.map(|v| { v.deref().clone() }) }) {
+            if let Some(v) = self.rustls_cv.get() {
                 Ok(v)
             } else {
                 Err(Error::General(String::from("No ClientCertVerifier provided")))
