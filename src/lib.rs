@@ -421,7 +421,12 @@ impl AnyPKI {
         self.blacklist.clear();
         self.whitelist.clear();
 
-
+        #[cfg(feature="rustls-verifier")]
+        {
+            self.rustls_rcs.take();
+            self.rustls_sv.take();
+            self.rustls_cv.take();
+        }
 
         self.clone()
     }
@@ -560,7 +565,8 @@ mod _rustls_verifier_impl {
             self.clone()
         }
         /// Provide ClientCertVerifier
-        /// ** WARNING: be careful to call this method. if this method called by multiples, that may causes memory leak if allow_memory_leak=true **
+        /// 
+        /// ## <big>WARNING: be careful to call this method. if this method called by multiples, that may causes memory leak if allow_memory_leak=true</big>
         #[inline(always)]
         pub fn client_cert_verifier(
             &self,
