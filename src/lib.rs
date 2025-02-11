@@ -13,6 +13,8 @@ use hex_literal::hex;
 
 use slice_find::SliceFind;
 
+use digest::Digest;
+
 use country_code_enum::CountryCode;
 
 use x509cert::{
@@ -121,11 +123,18 @@ impl<const N: usize> TryFrom<&[u8; N]> for Certificate {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Hash)]
 pub enum Fingerprint {
+    /// SHA-1 hash, it is not secure!
     SHA1([u8; 20]),
+
+    /// (SHA-2) SHA-256 hash.
     SHA256([u8; 32]),
+
+    /// (SHA-2) SHA-384 hash.
     SHA384([u8; 48]),
+
+    /// (SHA-2) SHA-512 hash.
     SHA512([u8; 64]),
 }
 impl core::fmt::Debug for Fingerprint {
@@ -147,11 +156,19 @@ impl core::fmt::Debug for Fingerprint {
         f.write_str(&out)
     }
 }
+
+impl PartialEq for Fingerprint {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        constant_time_eq::constant_time_eq(self.as_ref(), other.as_ref())
+    }
+}
+impl Eq for Fingerprint {}
+
 impl PartialEq<[u8]> for Fingerprint {
     #[inline(always)]
     fn eq(&self, other: &[u8]) -> bool {
-        let val: &[u8] = self.as_ref();
-        val == other
+        constant_time_eq::constant_time_eq(self.as_ref(), other)
     }
 }
 
@@ -315,9 +332,33 @@ impl Filter {
                 }
             },
             Fingerprint(fp) => {
-                if let Ok(cert_fp) = cert.fingerprint(fp.into()) {
-                    if fp == cert_fp.as_ref() {
-                        return true;
+                if let Ok(cert_der) = cert.encode_der() {
+                    use crate::Fingerprint::*;
+                    match fp {
+                        SHA1(_) => {
+                            let cert_fp = sha1::Sha1::digest(&cert_der);
+                            if fp == cert_fp.as_slice() {
+                                return true;
+                            }
+                        },
+                        SHA256(_) => {
+                            let cert_fp = sha2::Sha256::digest(&cert_der);
+                            if fp == cert_fp.as_slice() {
+                                return true;
+                            }
+                        },
+                        SHA384(_) => {
+                            let cert_fp = sha2::Sha384::digest(&cert_der);
+                            if fp == cert_fp.as_slice() {
+                                return true;
+                            }
+                        },
+                        SHA512(_) => {
+                            let cert_fp = sha2::Sha512::digest(&cert_der);
+                            if fp == cert_fp.as_slice() {
+                                return true;
+                            }
+                        },
                     }
                 }
             },
