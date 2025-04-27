@@ -1,6 +1,6 @@
 [package]
 name = "anypki"
-version = "0.1.9"
+version = "0.2.0"
 authors = ["Delta4 <delta4chat@gmx.com>"]
 edition = "2021"
 description="AnyPKI is a fully customizable PKI tool that allows your project to have a customized CA trust chain, blacklist/whitelist filtering root CAs by Country Code, Serial Number, SHA-1/SHA-256 fingerprint, or Issuer Name."
@@ -16,27 +16,27 @@ native-tls = ["dep:native-tls"]
 rustls-verifier = ["dep:rustls", "dep:webpki-roots"]
 
 [dependencies]
-anyhow = { version = "1.0.93", features = ["backtrace"] }
+anyhow = { version = "1.0.98", features = ["backtrace"] }
 
 hex = "0.4.3"
 hex-literal = "0.4.1"
 
 country-code-enum = "0.2.0"
-bcder = "0.7.4"
+bcder = "0.7.5"
 
-native-tls = { optional = true, version = "0.2.12", default-features = false, features = ["vendored"] }
-rustls-pki-types = "1.10.0"
+native-tls = { optional = true, version = "0.2.14", default-features = false, features = ["vendored"] }
+rustls-pki-types = "1.11.0"
 
-scc2 = "2.4.1"
+scc2 = "2.4.3"
 
 slice-find = "0.0.2"
 
-x509cert = "0.25.2"
+x509cert = "0.25.3"
 #x509cert = { path = "../cryptography-rs/x509-certificate/" }
 
 mozilla-root-ca = { optional = true, version = ">=0.0.0", features = ["x509cert", "pem"], default-features = false }
-rustls = { optional = true, version = "0.23.21", default-features = false }
-webpki-roots = { optional = true, version = "0.26.7", default-features = false }
+rustls = { optional = true, version = "0.23.26", default-features = false }
+webpki-roots = { optional = true, version = "0.26.9", default-features = false }
 sha1 = { version = "0.10.6", default-features = false }
 sha2 = { version = "0.10.8", default-features = false }
 digest = { version = "0.10.7", default-features = false }
