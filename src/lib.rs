@@ -543,14 +543,17 @@ impl AnyPKI {
 
     /// Apply this filter to a list of certificates.
     #[inline(always)]
-    pub fn apply(&self, iter: impl Iterator<Item=impl TryInto<Certificate>+Clone>) -> impl Iterator<Item=impl TryInto<Certificate>+Clone> {
+    pub fn apply<T>(&self, iter: impl Iterator<Item=T>) -> impl Iterator<Item=T>
+    where
+        T: TryInto<Certificate> + Clone,
+    {
         let this = self.clone();
         iter.filter(move |to_cert| { this.is_valid(to_cert.clone()) })
     }
 
     /// retain provided Vec to make sure it only contains valid certificates.
     #[inline(always)]
-    pub fn retain(&self, list: &mut Vec<impl TryInto<Certificate>+Clone>) {
+    pub fn retain<T: TryInto<Certificate>+Clone>(&self, list: &mut Vec<T>) {
         list.retain(|to_cert| { self.is_valid(to_cert.clone()) })
     }
 }
