@@ -13,7 +13,7 @@ repository="https://github.com/delta4chat/anypki"
 default = []
 mozilla-root-ca = ["dep:mozilla-root-ca"]
 native-tls = ["dep:native-tls"]
-rustls-verifier = ["dep:rustls", "dep:webpki-roots"]
+rustls-verifier = ["dep:rustls", "dep:webpki-roots", "dep:asyncute"]
 
 [dependencies]
 anyhow = { version = "1.0.98", features = ["backtrace"] }
@@ -41,7 +41,7 @@ sha1 = { version = "0.10.6", default-features = false }
 sha2 = { version = "0.10.8", default-features = false }
 digest = { version = "0.10.7", default-features = false }
 constant_time_eq = "0.3.1"
-asyncute = { version = "0.1.2" }
+asyncute = { version = "0.1.2", optional = true }
 
 [profile.release]
 panic = "unwind"

@@ -22,6 +22,9 @@ use x509cert::{
     KeyAlgorithm, SignatureAlgorithm, DigestAlgorithm,
 };
 
+#[cfg(feature="rustls-verifier")]
+use asyncute::Atom;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Certificate(X509Certificate);
 
@@ -643,16 +646,16 @@ mod _rustls_verifier_impl {
 
         /// Provide RootCertStore
         #[inline(always)]
-        pub fn root_cert_store(&self, rcs: scc::Shared<RootCertStore>) -> Self {
+        pub fn root_cert_store(&self, rcs: scc::Shared<RootCertStore>) -> &Self {
             self.rustls_rcs.set_shared(rcs);
-            self.clone()
+            self
         }
 
         /// Provide ServerCertVerifier
         #[inline(always)]
-        pub fn server_cert_verifier(&self, verifier: Arc<dyn ServerCertVerifier>) -> Self {
-            self.rustls_sv.set_arc(verifier);
-            self.clone()
+        pub fn server_cert_verifier(&self, verifier: Box<dyn ServerCertVerifier>) -> &Self {
+            self.rustls_sv.set(verifier);
+            self
         }
         /// Provide ClientCertVerifier
         /// 
@@ -662,30 +665,30 @@ mod _rustls_verifier_impl {
             &self,
             verifier: Box<dyn ClientCertVerifier>,
             allow_memory_leak: bool
-        ) -> Self {
+        ) -> &Self {
             if allow_memory_leak {
                 let rhs = Box::leak(Box::new(verifier.root_hint_subjects().to_vec()));
                 self.rustls_cv.set((verifier, rhs));
             } else {
                 self.rustls_cv.set((verifier, EMPTY_RHS));
             }
-            self.clone()
+            self
         }
 
         /* == private getters == */
 
         #[inline(always)]
-        pub(crate) fn _root_cert_store(&self) -> Result<scc::Shared<RootCertStore>, Error> {
+        pub(crate) fn _root_cert_store(&self) -> Result<Arc<RootCertStore>, Error> {
             self.rustls_rcs.update(|maybe_rcs| {
                 if maybe_rcs.is_none() {
-                    Some(RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() })
+                    Ok(Some(Arc::new(RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() })))
                 } else {
-                    None
+                    Err(())
                 }
             });
 
             if let Some(rcs) = self.rustls_rcs.get() {
-                Ok(rcs)
+                Ok(Arc::clone(&*rcs))
             } else {
                 Err(Error::General("Unexpected no RootCertStore".to_string()))
             }
@@ -713,7 +716,7 @@ mod _rustls_verifier_impl {
 
         #[inline(always)]
         pub(crate) fn _client_cert_verifier(&self)
-            -> Result<Arc<(Box<dyn ClientCertVerifier>, &'static [DistinguishedName])>, Error>
+            -> Result<scc::Shared<(Box<dyn ClientCertVerifier>, &'static [DistinguishedName])>, Error>
         {
             if let Some(v) = self.rustls_cv.get() {
                 Ok(v)
