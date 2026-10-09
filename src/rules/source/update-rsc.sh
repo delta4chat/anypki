@@ -31,8 +31,8 @@ echo "pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[" >> rs.tmp.out
 for cert in $(find -type f -name '*.crt' | sort)
 do
 	echo "/*"
-	openssl x509 -in $cert -noout -serial -issuer -subject -sha1 -fingerprint
-	openssl x509 -in $cert -noout -sha256 -fingerprint
+	openssl x509 -in $cert -noout -serial -issuer -subject -sha1 -fingerprint || true
+	openssl x509 -in $cert -noout -sha256 -fingerprint || true
 	echo "*/"
 	
 	echo "Fingerprint::SHA256(hex!(\"$(echo $(openssl x509 -in $cert -outform der | sha256sum | awk '{print $1}'))\")),"

@@ -27,6 +27,7 @@ EOF
 curl https://caprogram.360.cn/trusted_root_cert_sm.json -v -L -o 360-sm.json
 cat 360-sm.json | jq -r '.data[] | "    Fingerprint::SHA1(hex!(\"" + (.fingerprintSha1 | ascii_downcase) + "\")), // " + .rootCertificate' >> rs.tmp.out
 
+# TODO update this list
 cat <<EOF >> rs.tmp.out
 
     /* RSA begin */

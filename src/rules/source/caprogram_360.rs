@@ -22,6 +22,10 @@ pub const FINGERPRINT_LIST: &'static [Fingerprint] = &[
     Fingerprint::SHA1(hex!("b817d2df62ca1a05cf2874a686d9f90fcc7adb0e")), // Guizhou SM2 CA
     Fingerprint::SHA1(hex!("6630a4cc4b970bb6313e8907c66e02f4432e03b9")), // 江苏智慧数字认证有限公司
     Fingerprint::SHA1(hex!("149dcc7fe499d0f5f7511d45a749dc751f3e06bd")), // ZXCA SM2 ROOT R4
+    Fingerprint::SHA1(hex!("ffae56e05ae2acc1e794a9a7178771568e915d09")), // DongFang eTrust CA V2
+    Fingerprint::SHA1(hex!("9c631d2791c5e302ed44fb69999425c8bb3e4815")), // GFA ROOT SM2 CA
+    Fingerprint::SHA1(hex!("eba00712571d780eb8ed136ec79cbe49395632c8")), // HUAWEI TLS SM2 Root CA S240
+    Fingerprint::SHA1(hex!("588a41cb3cbdbd5d37849b91f1e8b80fa9b4b68d")), // NMGSCA ROOT SM2 CA
 
     /* RSA begin */
     Fingerprint::SHA256(hex!("ea152fd132de4f4e71930a9760517a81dacbbb5f1014d8bd7782ac0cc37e9431")), // GDCA TrustAUTH E5 ROOT

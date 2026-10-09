@@ -27,7 +27,7 @@ bcder = "0.7.5"
 native-tls = { optional = true, version = "0.2.14", default-features = false, features = ["vendored"] }
 rustls-pki-types = "1.11.0"
 
-scc2 = "2.4.3"
+scc = "3.8.8"
 
 slice-find = "0.0.2"
 
@@ -41,6 +41,7 @@ sha1 = { version = "0.10.6", default-features = false }
 sha2 = { version = "0.10.8", default-features = false }
 digest = { version = "0.10.7", default-features = false }
 constant_time_eq = "0.3.1"
+asyncute = { version = "0.1.2" }
 
 [profile.release]
 panic = "unwind"

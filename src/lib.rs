@@ -404,38 +404,54 @@ impl Filter {
     }
 }
 
-/// A builder style struct for building a set of certificates.
-#[derive(Debug, Clone)]
-pub struct AnyPKI {
-    blacklist: Arc<scc2::HashSet<Arc<Filter>>>,
-    whitelist: Arc<scc2::HashSet<Arc<Filter>>>,
+#[derive(Debug)]
+pub struct AnyPKIinner {
+    blacklist: scc::HashSet<Arc<Filter>>,
+    whitelist: scc::HashSet<Arc<Filter>>,
 
     #[cfg(feature="rustls-verifier")]
-    rustls_rcs: Arc<scc2::Atom<rustls::RootCertStore>>,
+    rustls_rcs: Atom<rustls::RootCertStore>,
     #[cfg(feature="rustls-verifier")]
-    rustls_sv: Arc<scc2::Atom<dyn rustls::client::danger::ServerCertVerifier>>,
+    rustls_sv: Atom<Box<dyn rustls::client::danger::ServerCertVerifier>>,
     #[cfg(feature="rustls-verifier")]
-    rustls_cv: Arc<scc2::Atom<(Box<dyn rustls::server::danger::ClientCertVerifier>, &'static [rustls::DistinguishedName])>>,
+    rustls_cv: Atom<(Box<dyn rustls::server::danger::ClientCertVerifier>, &'static [rustls::DistinguishedName])>,
 }
+
+#[derive(Debug, Clone)]
+/// A builder style struct for building a set of certificates.
+pub struct AnyPKI {
+    inner: Arc<AnyPKIinner>,
+}
+
 impl Default for AnyPKI {
     #[inline(always)]
     fn default() -> Self {
         Self::new()
     }
 }
+
+impl Deref for AnyPKI {
+    type Target = AnyPKIinner;
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
 impl AnyPKI {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
-            blacklist: Arc::new(scc2::HashSet::new()),
-            whitelist: Arc::new(scc2::HashSet::new()),
+            inner: Arc::new(AnyPKIinner {
+                blacklist: scc::HashSet::new(),
+                whitelist: scc::HashSet::new(),
 
-            #[cfg(feature="rustls-verifier")]
-            rustls_rcs: Arc::new(Default::default()),
-            #[cfg(feature="rustls-verifier")]
-            rustls_sv: Arc::new(Default::default()),
-            #[cfg(feature="rustls-verifier")]
-            rustls_cv: Arc::new(Default::default()),
+                #[cfg(feature="rustls-verifier")]
+                rustls_rcs: Atom::init(),
+                #[cfg(feature="rustls-verifier")]
+                rustls_sv: Atom::init(),
+                #[cfg(feature="rustls-verifier")]
+                rustls_cv: Atom::init(),
+            }),
         }
     }
 
@@ -459,8 +475,8 @@ impl AnyPKI {
 
     #[inline(always)]
     pub fn clear(&self) -> Self {
-        self.blacklist.clear();
-        self.whitelist.clear();
+        self.blacklist.clear_sync();
+        self.whitelist.clear_sync();
 
         #[cfg(feature="rustls-verifier")]
         {
@@ -473,9 +489,15 @@ impl AnyPKI {
     }
 
     #[inline(always)]
-    pub fn extend(&self, other: &Self) -> Self {
-        other.blacklist.scan(|f| { let _ = self.blacklist.insert(f.clone()); });
-        other.whitelist.scan(|f| { let _ = self.whitelist.insert(f.clone()); });
+    pub fn extend(&self, other: &Self) -> &Self {
+        other.blacklist.iter_sync(|f| {
+            let _ = self.blacklist.insert_sync(f.clone());
+            true
+        });
+        other.whitelist.iter_sync(|f| {
+            let _ = self.whitelist.insert_sync(f.clone());
+            true
+        });
 
         #[cfg(feature="rustls-verifier")]
         {
@@ -490,34 +512,32 @@ impl AnyPKI {
             }
         }
 
-        self.clone()
+        self
     }
 
     /// removes any certificates matches the provided filter.
     #[inline(always)]
-    pub fn blacklist(&self, f: impl Into<Filter>) -> Self {
-        let _ = self.blacklist.insert(Arc::new(f.into()));
-        self.clone()
+    pub fn blacklist(&self, f: impl Into<Filter>) -> &Self {
+        let _ = self.blacklist.insert_sync(Arc::new(f.into()));
+        self
     }
     #[inline(always)]
-    pub fn ban(&self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
+    pub fn ban(&self, f: impl Into<Filter>) -> &Self { self.blacklist(f) }
     #[inline(always)]
-    pub fn disallow(&self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
+    pub fn disallow(&self, f: impl Into<Filter>) -> &Self { self.blacklist(f) }
     #[inline(always)]
-    pub fn deny(&self, f: impl Into<Filter>) -> Self { self.blacklist(f) }
+    pub fn deny(&self, f: impl Into<Filter>) -> &Self { self.blacklist(f) }
 
-    /// only allows certificates that matches provided filter.
+    /// always allow certificates that matches provided filter.
     #[inline(always)]
-    pub fn whitelist(&self, f: impl Into<Filter>) -> Self {
-        let _ = self.whitelist.insert(Arc::new(f.into()));
-        self.clone()
+    pub fn whitelist(&self, f: impl Into<Filter>) -> &Self {
+        let _ = self.whitelist.insert_sync(Arc::new(f.into()));
+        self
     }
     #[inline(always)]
-    pub fn exclusive(&self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
+    pub fn allow(&self, f: impl Into<Filter>) -> &Self { self.whitelist(f) }
     #[inline(always)]
-    pub fn allow(&self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
-    #[inline(always)]
-    pub fn permit(&self, f: impl Into<Filter>) -> Self { self.whitelist(f) }
+    pub fn permit(&self, f: impl Into<Filter>) -> &Self { self.whitelist(f) }
 
     /// Checks the provided certificate whether should be kept.
     #[inline(always)]
@@ -529,12 +549,38 @@ impl AnyPKI {
                 return false;
             };
 
+        let mut valid;
+
         if ! self.whitelist.is_empty() {
-            return self.whitelist.any(|wf| { wf.matches(&cert) });
+            valid = false;
+            self.whitelist.iter_sync(|wf| {
+                if wf.matches(&cert) {
+                    valid = true;
+                    false // whether stop iter
+                } else {
+                    true // whether stop iter
+                }
+            });
+
+            if valid {
+                return valid;
+            }
         }
 
         if ! self.blacklist.is_empty() {
-            return ! self.blacklist.any(|bf| { bf.matches(&cert) });
+            valid = true;
+            self.blacklist.iter_sync(|bf| {
+                if bf.matches(&cert) {
+                    valid = false;
+                    false
+                } else {
+                    true
+                }
+            });
+
+            if ! valid {
+                return valid;
+            }
         }
 
         // no filter... default to allow
@@ -597,8 +643,8 @@ mod _rustls_verifier_impl {
 
         /// Provide RootCertStore
         #[inline(always)]
-        pub fn root_cert_store(&self, rcs: Arc<RootCertStore>) -> Self {
-            self.rustls_rcs.set_arc(rcs);
+        pub fn root_cert_store(&self, rcs: scc::Shared<RootCertStore>) -> Self {
+            self.rustls_rcs.set_shared(rcs);
             self.clone()
         }
 
@@ -629,7 +675,7 @@ mod _rustls_verifier_impl {
         /* == private getters == */
 
         #[inline(always)]
-        pub(crate) fn _root_cert_store(&self) -> Result<Arc<RootCertStore>, Error> {
+        pub(crate) fn _root_cert_store(&self) -> Result<scc::Shared<RootCertStore>, Error> {
             self.rustls_rcs.update(|maybe_rcs| {
                 if maybe_rcs.is_none() {
                     Some(RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() })

@@ -55,30 +55,35 @@ impl DefaultRules {
            .ban(CountryCode::MO) // Macau, another "SAR" of GFW-country: https://en.wikipedia.org/wiki/Special_administrative_regions_of_China
 
            .ban(CountryCode::TM) // Turkmenistan, https://arxiv.org/pdf/2304.04835
+           ;
         // TODO: update this CountryCode list
+
+        out
     }
 
     /// contains all of mitm_threats, but with extra list of Potential MITM threats.
     #[inline(always)]
     pub fn mitm_threats_extra() -> AnyPKI {
         // https://en.wikipedia.org/wiki/Freedom_on_the_Net
-        Self::mitm_threats()
-            .ban(CountryCode::AE) // United Arab Emirates
-            .ban(CountryCode::YE) // Yemen
-            .ban(CountryCode::CU) // Cuba
-            .ban(CountryCode::SA) // Saudi Arabia
-            .ban(CountryCode::TZ) // Tanzania
-            .ban(CountryCode::MM) // Myanmar
-            .ban(CountryCode::BN) // Bahrain
-            .ban(CountryCode::SY) // Syria
-            .ban(CountryCode::ET) // Ethiopia
-            .ban(CountryCode::EG) // Egypt
-            .ban(CountryCode::SD) // Sudan
-            .ban(CountryCode::VN) // Vietnam
-            .ban(CountryCode::UZ) // Uzbekistan
-            .ban(CountryCode::TH) // Thailand
-            .ban(CountryCode::TR) // Turkey
-            .ban(CountryCode::BD) // Bangladesh
-            .ban(CountryCode::PK) // Pakistan
+        let out = Self::mitm_threats();
+        out.ban(CountryCode::AE) // United Arab Emirates
+           .ban(CountryCode::YE) // Yemen
+           .ban(CountryCode::CU) // Cuba
+           .ban(CountryCode::SA) // Saudi Arabia
+           .ban(CountryCode::TZ) // Tanzania
+           .ban(CountryCode::MM) // Myanmar
+           .ban(CountryCode::BN) // Bahrain
+           .ban(CountryCode::SY) // Syria
+           .ban(CountryCode::ET) // Ethiopia
+           .ban(CountryCode::EG) // Egypt
+           .ban(CountryCode::SD) // Sudan
+           .ban(CountryCode::VN) // Vietnam
+           .ban(CountryCode::UZ) // Uzbekistan
+           .ban(CountryCode::TH) // Thailand
+           .ban(CountryCode::TR) // Turkey
+           .ban(CountryCode::BD) // Bangladesh
+           .ban(CountryCode::PK) // Pakistan
+           ;
+        out
     }
 }
